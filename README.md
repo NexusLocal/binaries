@@ -47,7 +47,7 @@ and its size.
 | nginx | 1.30 | Static OpenSSL 3.5, PCRE2 and zlib. Dynamic modules: stream, mail, headers-more, brotli, geoip2 and njs. |
 | PHP | 8.2, 8.3, 8.4, 8.5 | CLI and FPM. See [PHP](#php). |
 | Apache httpd | 2.4 | All modules as shared modules, the event, worker and prefork MPMs, mod_ssl and mod_http2. APR and APR-util are shared libraries in the package. Not included: mod_lua, mod_md and the LDAP modules. |
-| Redis | 7.2, 8.2, newest 8 | Planned |
+| Redis | 7.2, 8.2, newest 8 | redis-server, redis-cli and redis-benchmark, without TLS. 7.2 has the BSD license. Redis 8 is given out under the AGPLv3, one of its three licenses. 7.4 is not built, because its only licenses are RSALv2 and SSPLv1. |
 | MySQL | 8.0, 8.4, 9.7 | Planned |
 | MariaDB | 10.11, 11.4, 11.8, 12.3 | Planned |
 | PostgreSQL | 14, 15, 16, 17, 18 | Planned |

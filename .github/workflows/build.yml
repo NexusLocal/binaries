@@ -21,6 +21,9 @@ jobs:
         include:
           - { name: nginx, product: nginx, version: "" }
           - { name: httpd, product: httpd, version: "" }
+          - { name: redis-7.2, product: redis, version: "7.2" }
+          - { name: redis-8.2, product: redis, version: "8.2" }
+          - { name: redis-8.10, product: redis, version: "8" }
           - { name: php-8.5, product: php, version: "8.5" }
           - { name: php-8.4, product: php, version: "8.4" }
           - { name: php-8.3, product: php, version: "8.3" }
