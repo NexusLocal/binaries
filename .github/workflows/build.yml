@@ -19,8 +19,6 @@ jobs:
       fail-fast: false
       matrix:
         product: [nginx]
-    env:
-      NEXUS_BUILD_ROOT: ${{ runner.temp }}/nexus-build
     steps:
       - uses: actions/checkout@v5
 
@@ -30,9 +28,13 @@ jobs:
           key: sources-${{ hashFiles('sources.lock') }}
 
       - name: Build
+        env:
+          NEXUS_BUILD_ROOT: ${{ runner.temp }}/nexus-build
         run: ./build.sh ${{ matrix.product }}
 
       - name: Test
+        env:
+          NEXUS_BUILD_ROOT: ${{ runner.temp }}/nexus-build
         run: tests/${{ matrix.product }}.sh "$NEXUS_BUILD_ROOT"/out/${{ matrix.product }}-*.tar.xz
 
       - uses: actions/upload-artifact@v4
