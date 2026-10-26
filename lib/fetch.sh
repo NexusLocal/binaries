@@ -30,7 +30,7 @@ fetch() {
 
     if [ ! -f "$archive" ] || ! checksum_matches "$sha256" "$archive"; then
         log "Downloading $name from $url" >&2
-        curl -fsSL --retry 3 -o "$archive.part" "$url"
+        curl -fsSL --retry 8 --retry-connrefused -o "$archive.part" "$url"
         mv "$archive.part" "$archive"
     fi
 
