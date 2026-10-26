@@ -26,9 +26,11 @@ relative_path() {
     printf '%s%s\n' "$up" "${target#"$base"/}"
 }
 
+# COMPILED_PREFIX is the --prefix of the product, such as /var/empty/nexus/httpd. A link into it
+# points to a library that the package contains.
 links_into_package() {
     case "$1" in
-        "$BUILD_ROOT"/*|"$2"/*) return 0 ;;
+        "$BUILD_ROOT"/*|"$2"/*|"${COMPILED_PREFIX:-/nonexistent}"/*) return 0 ;;
         */*) return 1 ;;
         *) return 0 ;;
     esac
