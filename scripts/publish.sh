@@ -31,7 +31,7 @@ lock_line() {
 
 download_verified() {
     local url="$1" sha256="$2" target="$3"
-    curl -fsSL --retry 3 -o "$target" "$url"
+    curl -fsSL --retry 8 --retry-connrefused -o "$target" "$url"
     echo "$sha256  $target" | shasum -a 256 -c --status || { echo "error: SHA-256 mismatch for $url" >&2; exit 1; }
 }
 
