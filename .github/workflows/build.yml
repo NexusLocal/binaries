@@ -20,6 +20,7 @@ jobs:
       matrix:
         include:
           - { name: nginx, product: nginx, version: "" }
+          - { name: httpd, product: httpd, version: "" }
           - { name: php-8.5, product: php, version: "8.5" }
           - { name: php-8.4, product: php, version: "8.4" }
           - { name: php-8.3, product: php, version: "8.3" }

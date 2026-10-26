@@ -12,6 +12,9 @@ tests/nginx.sh /tmp/nexus-build/out/nginx-1.30.6-macos-arm64.tar.xz
 
 ./build.sh php 8.5
 tests/php.sh /tmp/nexus-build/out/php-8.5.12-macos-arm64.tar.xz
+
+./build.sh httpd
+tests/httpd.sh /tmp/nexus-build/out/httpd-2.4.69-macos-arm64.tar.xz
 ```
 
 The build uses `/tmp/nexus-build`. Set `NEXUS_BUILD_ROOT` to use another folder. The path must
@@ -43,7 +46,7 @@ and its size.
 | --- | --- | --- |
 | nginx | 1.30 | Static OpenSSL 3.5, PCRE2 and zlib. Dynamic modules: stream, mail, headers-more, brotli, geoip2 and njs. |
 | PHP | 8.2, 8.3, 8.4, 8.5 | CLI and FPM. See [PHP](#php). |
-| Apache | 2.4 | Planned |
+| Apache httpd | 2.4 | All modules as shared modules, the event, worker and prefork MPMs, mod_ssl and mod_http2. APR and APR-util are shared libraries in the package. Not included: mod_lua, mod_md and the LDAP modules. |
 | Redis | 7.2, 8.2, newest 8 | Planned |
 | MySQL | 8.0, 8.4, 9.7 | Planned |
 | MariaDB | 10.11, 11.4, 11.8, 12.3 | Planned |
