@@ -69,5 +69,5 @@ build_product() {
     add_license "$package" icu "$WORK_DIR/icu-$(source_version icu)/LICENSE"
     write_source_file "$package" "$source_name" openssl icu
 
-    archive_package postgresql "$version" "PostgreSQL"
+    PACKAGE_LINE="$1" archive_package postgresql "$version" "PostgreSQL"
 }

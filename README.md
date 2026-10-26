@@ -23,6 +23,22 @@ not contain spaces, because many configure scripts fail on them.
 A package is a `.tar.xz` file in `out/`, with a `.json` file next to it that gives its SHA-256
 and its size.
 
+## Releases and the manifest
+
+After every successful build on `main`, CI publishes each new package as the release
+`<name>-<version>-r<revision>`, with the package, its JSON file and every source archive it was
+built from. A release that exists already never changes. A recipe sets `PACKAGE_REVISION` higher
+when it changes and the upstream version stays the same.
+
+The Nexus app reads
+[`manifest.json`](https://github.com/NexusLocal/binaries/releases/download/manifest/manifest.json),
+which lists every package with its version line, URL, SHA-256 and license. Node and Composer are
+in the manifest too. Nexus downloads them from nodejs.org and getcomposer.org, with the SHA-256
+from `sources.lock`.
+
+`scripts/publish.sh` does this work. `NEXUS_DRY_RUN=1 scripts/publish.sh <folder>` shows what it
+would publish and writes the manifest into the folder, without a change on GitHub.
+
 ## Rules
 
 - **A clean environment.** `build.sh` starts again with an empty environment and the PATH
@@ -58,8 +74,9 @@ and its size.
   FreeType, JPEG, PNG and WebP), gettext, iconv, intl, ldap, mbstring, mysqli, mysqlnd, openssl,
   pcntl, PDO, pdo_mysql, pdo_sqlite, posix, readline (libedit), session, SimpleXML, soap,
   sockets, sodium, sqlite3, tokenizer, xml, xmlreader, xmlwriter, xsl, zip and zlib.
-- **Shared, turned on in php.ini:** apcu, igbinary, pcov, redis (with igbinary), xdebug, yaml,
-  and opcache for 8.2 to 8.4. In 8.5 opcache is always built in.
+- **Shared, turned on in php.ini:** apcu, igbinary, pcov, pgsql, pdo_pgsql, redis (with
+  igbinary), xdebug, yaml, and opcache for 8.2 to 8.4. In 8.5 opcache is always built in. pgsql
+  and pdo_pgsql contain a static libpq 18 with its own OpenSSL.
 - **From macOS:** libxml2, libxslt, curl, sqlite, libedit, iconv, zlib and bzip2.
 - **In the package:** OpenSSL 3.5, ICU and libintl (shared), and oniguruma, libsodium, libzip,
   libpng, libjpeg-turbo, libwebp, FreeType, libyaml and the OpenLDAP client (static).
@@ -77,7 +94,7 @@ Known choices:
   `PASSWORD_ARGON2I` and `PASSWORD_ARGON2ID` itself.
 - **igbinary for PHP 8.5:** 3.2.16 is the newest stable release, and it does not compile
   against PHP 8.5. PHP 8.5 uses the release candidate 3.2.17RC1 until a stable release exists.
-- **Not included yet:** imagick, pgsql and pdo_pgsql. They need ImageMagick and libpq.
+- **Not included yet:** imagick. It needs ImageMagick.
 
 ## License
 

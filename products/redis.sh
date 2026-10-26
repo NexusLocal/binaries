@@ -47,5 +47,5 @@ build_product() {
     add_license "$package" redis "$license_file"
     write_source_file "$package" "$source_name"
 
-    archive_package redis "$version" "$license"
+    PACKAGE_LINE="$1" archive_package redis "$version" "$license"
 }
