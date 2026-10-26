@@ -12,6 +12,10 @@ on:
       - sources.lock
       - .github/workflows/build.yml
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: xcode-27
@@ -31,6 +35,11 @@ jobs:
           - { name: mariadb-11.4, product: mariadb, version: "11.4" }
           - { name: mariadb-11.8, product: mariadb, version: "11.8" }
           - { name: mariadb-12.3, product: mariadb, version: "12.3" }
+          - { name: postgresql-14, product: postgresql, version: "14" }
+          - { name: postgresql-15, product: postgresql, version: "15" }
+          - { name: postgresql-16, product: postgresql, version: "16" }
+          - { name: postgresql-17, product: postgresql, version: "17" }
+          - { name: postgresql-18, product: postgresql, version: "18" }
           - { name: php-8.5, product: php, version: "8.5" }
           - { name: php-8.4, product: php, version: "8.4" }
           - { name: php-8.3, product: php, version: "8.3" }

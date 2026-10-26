@@ -72,6 +72,62 @@ build_openssl() {
     mark_built openssl
 }
 
+# A shared OpenSSL in its own folder, so the other packages keep linking the static one. libpq
+# refuses a static OpenSSL: its build checks that libpq calls no function that ends the process,
+# and a static libcrypto brings atexit and pthread_exit into libpq.
+OPENSSL_SHARED_DIR="$STAGE_DIR/openssl-shared"
+
+build_openssl_shared() {
+    [ -f "$OPENSSL_SHARED_DIR/.built-$(source_version openssl)" ] && return 0
+    log "Building openssl $(source_version openssl) (shared)"
+
+    local dir
+    dir="$(unpack openssl)"
+    (
+        cd "$dir"
+        run_logged configure.log ./Configure darwin64-arm64-cc shared no-tests no-docs \
+            --prefix="$OPENSSL_SHARED_DIR" --libdir=lib --openssldir=/private/etc/ssl
+        run_logged make.log make -j"$JOBS"
+        run_logged install.log make install_sw
+    )
+    touch "$OPENSSL_SHARED_DIR/.built-$(source_version openssl)"
+}
+
+# A static libpq for the pgsql and pdo_pgsql extensions of PHP, from the newest PostgreSQL. Only
+# the static library is built, so the check of the PostgreSQL build against a static OpenSSL in
+# the shared libpq does not apply. One combined libpq.a in its own folder holds libpq,
+# libpgcommon, libpgport and OpenSSL, so -lpq alone links everything.
+LIBPQ_DIR="$STAGE_DIR/libpq"
+
+build_libpq() {
+    local version stamp dir build
+    version="$(source_version postgresql-18)"
+    stamp="$LIBPQ_DIR/.built-$version"
+
+    [ -f "$stamp" ] && return 0
+    log "Building libpq $version (static)"
+
+    dir="$(unpack postgresql-18)"
+    build="$WORK_DIR/libpq-install"
+    rm -rf "$LIBPQ_DIR" "$build"
+    mkdir -p "$LIBPQ_DIR/include" "$LIBPQ_DIR/lib"
+    (
+        cd "$dir"
+        run_logged configure.log ./configure --prefix="$build" \
+            --with-openssl --without-icu --without-readline --without-zlib --without-lz4 --without-zstd \
+            --with-includes="$STAGE_DIR/include" --with-libraries="$STAGE_DIR/lib"
+        run_logged make-port.log make -j"$JOBS" -C src/port
+        run_logged make-common.log make -j"$JOBS" -C src/common
+        run_logged make-libpq.log make -j"$JOBS" -C src/interfaces/libpq all-static-lib
+        install -m 644 src/interfaces/libpq/libpq-fe.h src/interfaces/libpq/libpq-events.h \
+            src/include/postgres_ext.h "$LIBPQ_DIR/include/"
+        run_or_fail /usr/bin/libtool -static -o "$LIBPQ_DIR/lib/libpq.a" \
+            src/interfaces/libpq/libpq.a src/common/libpgcommon_shlib.a src/port/libpgport_shlib.a \
+            "$STAGE_DIR/lib/libssl.a" "$STAGE_DIR/lib/libcrypto.a"
+    )
+    touch "$stamp"
+}
+
 # ICU stays a shared library, so the CLI and FPM binaries of PHP share one copy of its 30 MB of
 # data. The relocation step changes its links to @rpath.
 build_icu() {
