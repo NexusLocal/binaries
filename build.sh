@@ -3,6 +3,7 @@
 # Builds one Nexus package from source.
 #
 #   ./build.sh nginx
+#   ./build.sh php 8.5
 #   NEXUS_BUILD_ROOT=/tmp/nexus-build ./build.sh nginx
 #
 # The script starts again in an empty environment, so tools and libraries from MAMP, Homebrew
@@ -24,7 +25,7 @@ product="${1:-}"
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ -z "$product" ] || [ ! -f "$repo/products/$product.sh" ]; then
-    echo "usage: ./build.sh <product>" >&2
+    echo "usage: ./build.sh <product> [version]" >&2
     echo "products: $(cd "$repo/products" && ls -1 *.sh | sed 's/\.sh$//' | tr '\n' ' ')" >&2
     exit 1
 fi
@@ -32,9 +33,10 @@ fi
 source "$repo/lib/env.sh"
 source "$repo/lib/fetch.sh"
 source "$repo/lib/toolchain.sh"
+source "$repo/lib/dependencies.sh"
 source "$repo/lib/relocate.sh"
 source "$repo/lib/check.sh"
 source "$repo/lib/package.sh"
 source "$repo/products/$product.sh"
 
-build_product
+build_product "${@:2}"

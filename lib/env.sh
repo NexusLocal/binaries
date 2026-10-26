@@ -25,7 +25,7 @@ export CXX=/usr/bin/clang++
 export CFLAGS="-O2 -arch arm64 -mmacosx-version-min=$MACOS_MIN"
 export CXXFLAGS="$CFLAGS"
 export CPPFLAGS="-I$STAGE_DIR/include"
-export LDFLAGS="-L$STAGE_DIR/lib -arch arm64 -mmacosx-version-min=$MACOS_MIN"
+export LDFLAGS="-L$STAGE_DIR/lib -arch arm64 -mmacosx-version-min=$MACOS_MIN -Wl,-headerpad_max_install_names"
 export PKG_CONFIG_LIBDIR="$STAGE_DIR/lib/pkgconfig"
 export PKG_CONFIG_PATH=""
 
@@ -38,4 +38,23 @@ log() {
 fail() {
     printf 'error: %s\n' "$*" >&2
     exit 1
+}
+
+run_or_fail() {
+    local output
+
+    if ! output="$("$@" 2>&1)"; then
+        printf '%s\n' "$output" >&2
+        fail "$*"
+    fi
+}
+
+run_logged() {
+    local logfile="$1"
+    shift
+
+    if ! "$@" > "$logfile" 2>&1; then
+        tail -40 "$logfile" >&2
+        fail "$* failed, see $(pwd)/$logfile"
+    fi
 }

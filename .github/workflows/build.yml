@@ -18,7 +18,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        product: [nginx]
+        include:
+          - { name: nginx, product: nginx, version: "" }
+          - { name: php-8.5, product: php, version: "8.5" }
+          - { name: php-8.4, product: php, version: "8.4" }
+          - { name: php-8.3, product: php, version: "8.3" }
+          - { name: php-8.2, product: php, version: "8.2" }
+    name: build (${{ matrix.name }})
     steps:
       - uses: actions/checkout@v5
 
@@ -30,16 +36,16 @@ jobs:
       - name: Build
         env:
           NEXUS_BUILD_ROOT: ${{ runner.temp }}/nexus-build
-        run: ./build.sh ${{ matrix.product }}
+        run: ./build.sh ${{ matrix.product }} ${{ matrix.version }}
 
       - name: Test
         env:
           NEXUS_BUILD_ROOT: ${{ runner.temp }}/nexus-build
-        run: tests/${{ matrix.product }}.sh "$NEXUS_BUILD_ROOT"/out/${{ matrix.product }}-*.tar.xz
+        run: tests/${{ matrix.product }}.sh "$NEXUS_BUILD_ROOT"/out/${{ matrix.name }}*-macos-arm64.tar.xz
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.product }}
+          name: ${{ matrix.name }}
           path: |
-            ${{ runner.temp }}/nexus-build/out/${{ matrix.product }}-*.tar.xz
-            ${{ runner.temp }}/nexus-build/out/${{ matrix.product }}-*.json
+            ${{ runner.temp }}/nexus-build/out/${{ matrix.name }}*-macos-arm64.tar.xz
+            ${{ runner.temp }}/nexus-build/out/${{ matrix.name }}*-macos-arm64.json
