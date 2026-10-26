@@ -34,6 +34,31 @@ ensure_ninja() {
     echo "$version" > "$TOOLS_DIR/.ninja-version"
 }
 
+build_gnu_tool() {
+    local name="$1" version dir
+    version="$(source_version "$name")"
+
+    if [ -f "$TOOLS_DIR/.$name-version" ] && [ "$(cat "$TOOLS_DIR/.$name-version")" = "$version" ]; then
+        return
+    fi
+
+    log "Building $name $version for the build tools"
+
+    dir="$(unpack "$name")"
+    (
+        cd "$dir"
+        run_logged configure.log ./configure --prefix="$TOOLS_DIR"
+        run_logged make.log make -j"$JOBS"
+        run_logged install.log make install
+    )
+    echo "$version" > "$TOOLS_DIR/.$name-version"
+}
+
+ensure_autoconf() {
+    build_gnu_tool m4
+    build_gnu_tool autoconf
+}
+
 ensure_pkgconf() {
     local version
     version="$(source_version pkgconf)"
