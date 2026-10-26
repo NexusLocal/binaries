@@ -1,0 +1,42 @@
+name: Updates
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Look for newer upstream releases
+        id: check
+        run: |
+          scripts/check-updates.sh > updates.md
+          cat updates.md
+          echo "count=$(grep -c '^- ' updates.md || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the issue "Updates available" current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COUNT: ${{ steps.check.outputs.count }}
+        run: |
+          number="$(gh issue list --state open --search 'in:title "Updates available"' --json number --jq '.[0].number')"
+          if [ "$COUNT" = "0" ]; then
+            [ -n "$number" ] && gh issue close "$number" --comment "Every source is on its newest version."
+            exit 0
+          fi
+          {
+            echo "These sources have a newer upstream release. Update sources.lock, check each SHA-256 against the upstream checksum, and push."
+            echo
+            cat updates.md
+          } > body.md
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file body.md
+          else
+            gh issue create --title "Updates available" --body-file body.md
+          fi
