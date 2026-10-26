@@ -6,8 +6,8 @@ PHP_PREFIX=/var/empty/nexus/php
 # There is no libargon2. libsodium and libargon2 both export blake2b_init, blake2b_update and
 # blake2b_final, so in a static link argon2 called the libsodium versions with a smaller struct
 # and overflowed its stack. ext/sodium provides PASSWORD_ARGON2I and PASSWORD_ARGON2ID itself.
-PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml openldap postgresql-18"
-PHP_EXTENSIONS="redis xdebug pcov apcu yaml"
+PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml openldap postgresql-18 imagemagick"
+PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick"
 
 # igbinary 3.2.16 is the newest stable release and does not compile against PHP 8.5, which
 # moved php_smart_string.h. Only the release candidate 3.2.17RC1 supports PHP 8.5.
@@ -46,6 +46,7 @@ build_php_dependencies() {
     build_autotools_dependency libyaml
     build_openldap
     build_libpq
+    build_imagemagick
 }
 
 make_script_relocatable() {
@@ -180,6 +181,7 @@ build_product() {
     build_pecl_extension "$package" pecl-pcov
     build_pecl_extension "$package" pecl-apcu
     build_pecl_extension "$package" pecl-yaml --with-yaml="$STAGE_DIR"
+    PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" pecl-imagick --with-imagick="$STAGE_DIR"
 
     add_license "$package" php "$src/LICENSE"
     write_source_file "$package" "$source_name" $PHP_LIBRARIES "$(igbinary_source "$minor")" \
