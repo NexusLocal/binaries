@@ -6,7 +6,7 @@ PHP_PREFIX=/var/empty/nexus/php
 # There is no libargon2. libsodium and libargon2 both export blake2b_init, blake2b_update and
 # blake2b_final, so in a static link argon2 called the libsodium versions with a smaller struct
 # and overflowed its stack. ext/sodium provides PASSWORD_ARGON2I and PASSWORD_ARGON2ID itself.
-PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml openldap"
+PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml openldap postgresql-18"
 PHP_EXTENSIONS="redis xdebug pcov apcu yaml"
 
 # igbinary 3.2.16 is the newest stable release and does not compile against PHP 8.5, which
@@ -45,6 +45,7 @@ build_php_dependencies() {
     build_gettext
     build_autotools_dependency libyaml
     build_openldap
+    build_libpq
 }
 
 make_script_relocatable() {
@@ -103,6 +104,8 @@ build_product() {
         export PKG_CONFIG="pkg-config --static"
         export CXXFLAGS="$CXXFLAGS -std=c++17"
         export LIBS="-framework CoreFoundation -lresolv"
+        export PGSQL_CFLAGS="-I$LIBPQ_DIR/include"
+        export PGSQL_LIBS="-L$LIBPQ_DIR/lib -lpq"
         run_logged configure.log ./configure \
             --prefix="$PHP_PREFIX" \
             --with-config-file-path="$PHP_PREFIX/etc" \
@@ -131,6 +134,8 @@ build_product() {
             --with-openssl \
             --enable-pcntl \
             --with-pdo-sqlite \
+            --with-pgsql="shared,$LIBPQ_DIR" \
+            --with-pdo-pgsql="shared,$LIBPQ_DIR" \
             --with-sqlite3 \
             --with-libedit \
             --enable-soap \

@@ -32,8 +32,13 @@ write_source_file() {
 
 # Writes <name>-<version>-macos-arm64.tar.xz and a JSON file next to it with the SHA-256 and the
 # size. The manifest of the release is made from these JSON files.
+#
+# PACKAGE_LINE is the version line that Nexus offers, such as 8.5, or 8 for the newest Redis 8.
+# Without it, the line is the first two parts of the version. PACKAGE_REVISION goes up when a
+# recipe changes and the upstream version stays the same. The release tag is
+# <name>-<version>-r<revision>.
 archive_package() {
-    local name="$1" version="$2" license="$3" package archive sha256 size
+    local name="$1" version="$2" license="$3" package archive sha256 size line revision
 
     package="$(package_dir "$name" "$version")"
     archive="$OUT_DIR/$name-$version-macos-arm64.tar.xz"
@@ -46,11 +51,16 @@ archive_package() {
 
     sha256="$(shasum -a 256 "$archive" | cut -d' ' -f1)"
     size="$(stat -f %z "$archive")"
+    line="${PACKAGE_LINE:-$(echo "$version" | cut -d. -f1-2)}"
+    revision="${PACKAGE_REVISION:-1}"
 
     cat > "${archive%.tar.xz}.json" <<EOF
 {
   "name": "$name",
   "version": "$version",
+  "line": "$line",
+  "revision": $revision,
+  "tag": "$name-$version-r$revision",
   "file": "$(basename "$archive")",
   "sha256": "$sha256",
   "size": $size,
@@ -59,6 +69,8 @@ archive_package() {
   "license": "$license"
 }
 EOF
+
+    cp "$package/SOURCE" "${archive%.tar.xz}.sources.txt"
 
     log "Package ready: $archive ($((size / 1024 / 1024)) MB)"
 }

@@ -116,11 +116,14 @@ build_libpq() {
         run_logged configure.log ./configure --prefix="$build" \
             --with-openssl --without-icu --without-readline --without-zlib --without-lz4 --without-zstd \
             --with-includes="$STAGE_DIR/include" --with-libraries="$STAGE_DIR/lib"
+        run_logged make-headers.log make -C src/backend generated-headers
         run_logged make-port.log make -j"$JOBS" -C src/port
         run_logged make-common.log make -j"$JOBS" -C src/common
         run_logged make-libpq.log make -j"$JOBS" -C src/interfaces/libpq all-static-lib
         install -m 644 src/interfaces/libpq/libpq-fe.h src/interfaces/libpq/libpq-events.h \
             src/include/postgres_ext.h "$LIBPQ_DIR/include/"
+        mkdir -p "$LIBPQ_DIR/include/libpq"
+        install -m 644 src/include/libpq/libpq-fs.h "$LIBPQ_DIR/include/libpq/"
         run_or_fail /usr/bin/libtool -static -o "$LIBPQ_DIR/lib/libpq.a" \
             src/interfaces/libpq/libpq.a src/common/libpgcommon_shlib.a src/port/libpgport_shlib.a \
             "$STAGE_DIR/lib/libssl.a" "$STAGE_DIR/lib/libcrypto.a"
