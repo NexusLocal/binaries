@@ -49,3 +49,7 @@ mysql-9.7 9.7.4 abf378ff27753325c908d687a3060f025c58b6530eda53ff4a0c6fc5ff3d7716
 mysql-8.0-source 8.0.46 e0d1a98ae5188c6a4efed74c74ff28115d4b791bc9d591a78e14d20aded67344 https://cdn.mysql.com/Downloads/MySQL-8.0/mysql-8.0.46.tar.gz
 mysql-8.4-source 8.4.13 f6ddc7f7fb6462bab8b533b13c06af3fff57fa9ca12259b81ab13cd9930b9d58 https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13.tar.gz
 mysql-9.7-source 9.7.4 9188eb1abec42b8ab8bb69948492f06258dd27e6aabd13e2d4c6197dbcde75b2 https://cdn.mysql.com/Downloads/MySQL-9.7/mysql-9.7.4.tar.gz
+mariadb-10.11 10.11.19 b8e543ee69d380fb1cfd563226f49e0fe96e4d67e7b7a9045ee514a168ed2066 https://archive.mariadb.org/mariadb-10.11.19/source/mariadb-10.11.19.tar.gz
+mariadb-11.4 11.4.13 1bb254b106d0a7ca871cfa18fa6e18d4b80a7430f9ec9d1571ec4271a13def96 https://archive.mariadb.org/mariadb-11.4.13/source/mariadb-11.4.13.tar.gz
+mariadb-11.8 11.8.9 2e015b7e91004142eda8b3a20d3ceb875cf2ae55e72603e7222cd497d4e56fc6 https://archive.mariadb.org/mariadb-11.8.9/source/mariadb-11.8.9.tar.gz
+mariadb-12.3 12.3.3 e99d739fd4a55f9a11dea7bd2287a262673e287550af3071c8469dd2bec0c163 https://archive.mariadb.org/mariadb-12.3.3/source/mariadb-12.3.3.tar.gz
