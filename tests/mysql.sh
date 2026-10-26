@@ -41,8 +41,10 @@ sql=("$client" --no-defaults -uroot -h127.0.0.1 -P"$port")
 trap '"${admin[@]}" shutdown > /dev/null 2>&1 || true; sleep 2; rm -rf "$base"' EXIT
 
 if [ -x "$root/bin/mariadbd" ]; then
-    "$root/scripts/mariadb-install-db" --no-defaults --basedir="$root" --datadir="$data" \
-        --auth-root-authentication-method=normal > "$base/install.log" 2>&1 \
+    # mariadb-install-db breaks on a space in --basedir, so it runs from the package folder
+    # with --basedir=. The data folder may have a space.
+    (cd "$root" && ./scripts/mariadb-install-db --no-defaults --basedir=. --datadir="$data" \
+        --auth-root-authentication-method=normal) > "$base/install.log" 2>&1 \
         || { cat "$base/install.log"; echo "error: mariadb-install-db failed" >&2; exit 1; }
 else
     "$server" --no-defaults --basedir="$root" --datadir="$data" --initialize-insecure \
@@ -54,7 +56,7 @@ echo "==> $("$server" --version)"
 echo "==> start the server on port $port"
 "$server" --no-defaults --basedir="$root" --datadir="$data" --port="$port" \
     --bind-address=127.0.0.1 --socket="$socket" --log-error="$base/error.log" \
-    --pid-file="$base/server.pid" "${extra[@]}" &
+    --pid-file="$base/server.pid" ${extra[@]+"${extra[@]}"} &
 
 for attempt in $(seq 1 60); do
     "${admin[@]}" ping > /dev/null 2>&1 && break
