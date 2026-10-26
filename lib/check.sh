@@ -23,7 +23,7 @@ check_package() {
 
         while IFS= read -r rpath; do
             case "$rpath" in
-                @loader_path/*|@executable_path/*) ;;
+                @loader_path|@loader_path/*|@executable_path|@executable_path/*) ;;
                 *)
                     echo "  ${path#$package/} has the rpath $rpath"
                     problems=$((problems + 1))

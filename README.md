@@ -48,7 +48,7 @@ and its size.
 | PHP | 8.2, 8.3, 8.4, 8.5 | CLI and FPM. See [PHP](#php). |
 | Apache httpd | 2.4 | All modules as shared modules, the event, worker and prefork MPMs, mod_ssl and mod_http2. APR and APR-util are shared libraries in the package. Not included: mod_lua, mod_md and the LDAP modules. |
 | Redis | 7.2, 8.2, newest 8 | redis-server, redis-cli and redis-benchmark, without TLS. 7.2 has the BSD license. Redis 8 is given out under the AGPLv3, one of its three licenses. 7.4 is not built, because its only licenses are RSALv2 and SSPLv1. |
-| MySQL | 8.0, 8.4, 9.7 | Planned |
+| MySQL | 8.0, 8.4, 9.7 | The official Oracle builds for macOS on Apple silicon, repackaged: without the debug server, the test and MyISAM tools, the static libraries and the headers. Each release also carries the matching source archive. |
 | MariaDB | 10.11, 11.4, 11.8, 12.3 | Planned |
 | PostgreSQL | 14, 15, 16, 17, 18 | Planned |
 
