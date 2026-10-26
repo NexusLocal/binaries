@@ -120,6 +120,20 @@ foreach ($checks as $name => $check) {
 exit($failed === 0 ? 0 : 1);
 PHP
 
+echo "==> imagick writes PNG, JPEG and WebP"
+"$php" -n -d "extension_dir=$extensions" -d extension=imagick -r '
+foreach (["png", "jpeg", "webp"] as $format) {
+    $image = new Imagick();
+    $image->newImage(16, 16, "red");
+    $image->setImageFormat($format);
+    if (strlen($image->getImageBlob()) === 0) {
+        fwrite(STDERR, "error: imagick wrote no $format\n");
+        exit(1);
+    }
+}
+echo "  ImageMagick ", Imagick::getVersion()["versionString"], "\n";
+'
+
 echo "==> php-config gives paths inside the package"
 prefix="$("$root/bin/php-config" --prefix)"
 [ "$prefix" = "$root" ] || { echo "error: php-config --prefix gives $prefix" >&2; exit 1; }

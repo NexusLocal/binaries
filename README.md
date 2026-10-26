@@ -74,9 +74,10 @@ would publish and writes the manifest into the folder, without a change on GitHu
   FreeType, JPEG, PNG and WebP), gettext, iconv, intl, ldap, mbstring, mysqli, mysqlnd, openssl,
   pcntl, PDO, pdo_mysql, pdo_sqlite, posix, readline (libedit), session, SimpleXML, soap,
   sockets, sodium, sqlite3, tokenizer, xml, xmlreader, xmlwriter, xsl, zip and zlib.
-- **Shared, turned on in php.ini:** apcu, igbinary, pcov, pgsql, pdo_pgsql, redis (with
+- **Shared, turned on in php.ini:** apcu, igbinary, imagick, pcov, pgsql, pdo_pgsql, redis (with
   igbinary), xdebug, yaml, and opcache for 8.2 to 8.4. In 8.5 opcache is always built in. pgsql
-  and pdo_pgsql contain a static libpq 18 with its own OpenSSL.
+  and pdo_pgsql contain a static libpq 18 with its own OpenSSL. imagick contains a static
+  ImageMagick 7 with PNG, JPEG, WebP and FreeType, built with zero configuration.
 - **From macOS:** libxml2, libxslt, curl, sqlite, libedit, iconv, zlib and bzip2.
 - **In the package:** OpenSSL 3.5, ICU and libintl (shared), and oniguruma, libsodium, libzip,
   libpng, libjpeg-turbo, libwebp, FreeType, libyaml and the OpenLDAP client (static).
@@ -94,7 +95,8 @@ Known choices:
   `PASSWORD_ARGON2I` and `PASSWORD_ARGON2ID` itself.
 - **igbinary for PHP 8.5:** 3.2.16 is the newest stable release, and it does not compile
   against PHP 8.5. PHP 8.5 uses the release candidate 3.2.17RC1 until a stable release exists.
-- **Not included yet:** imagick. It needs ImageMagick.
+- **ImageMagick formats:** no TIFF, HEIC, JPEG XL, color profiles (lcms) or SVG rendering. Each
+  one needs another library in the package.
 
 ## License
 

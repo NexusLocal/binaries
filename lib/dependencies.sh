@@ -93,6 +93,33 @@ build_openssl_shared() {
     touch "$OPENSSL_SHARED_DIR/.built-$(source_version openssl)"
 }
 
+# A static ImageMagick for the imagick extension of PHP, with only the formats that the PHP
+# package has libraries for. Zero configuration builds the configuration files into the library,
+# so ImageMagick reads no files from a build path at runtime.
+build_imagemagick() {
+    dependency_built imagemagick && return 0
+    log "Building ImageMagick $(source_version imagemagick) (static)"
+
+    local dir
+    dir="$(unpack imagemagick)"
+    (
+        cd "$dir"
+        run_logged configure.log ./configure --prefix="$STAGE_DIR" --libdir="$STAGE_DIR/lib" \
+            --disable-shared --enable-static --enable-zero-configuration \
+            --disable-openmp --disable-docs --disable-dependency-tracking \
+            --without-modules --without-magick-plus-plus --without-perl --without-x \
+            --with-quantum-depth=16 \
+            --with-png --with-jpeg --with-webp --with-freetype --with-zlib --with-bzlib --with-xml \
+            --without-tiff --without-heic --without-jxl --without-lcms --without-raw \
+            --without-openexr --without-djvu --without-fftw --without-fontconfig --without-gslib \
+            --without-gvc --without-lqr --without-lzma --without-zstd --without-rsvg --without-pango \
+            --without-wmf --without-openjp2 --without-dps --without-jbig --without-uhdr
+        run_logged make.log make -j"$JOBS"
+        run_logged install.log make install
+    )
+    mark_built imagemagick
+}
+
 # A static libpq for the pgsql and pdo_pgsql extensions of PHP, from the newest PostgreSQL. Only
 # the static library is built, so the check of the PostgreSQL build against a static OpenSSL in
 # the shared libpq does not apply. One combined libpq.a in its own folder holds libpq,
