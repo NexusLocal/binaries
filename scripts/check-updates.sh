@@ -79,3 +79,34 @@ report imagemagick "$(github_latest ImageMagick/ImageMagick "")"
 report cmake "$(github_latest Kitware/CMake)"
 report ninja "$(github_latest ninja-build/ninja)"
 for extension in xdebug pcov redis apcu yaml imagick; do report "pecl-$extension" "$(pecl_latest "$extension")"; done
+
+# The last day of security fixes in support.lock, against endoflife.date. The LTS flags are not
+# compared: endoflife.date gives a date for some of them, and the decision record sets them.
+endoflife_end() {
+    curl -fsS --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '.[] | select(.cycle == $cycle) | if .eol == false then "-" else .eol end'
+}
+
+report_support() {
+    local name="$1" line="$2" newest="$3" current
+    current="$(awk -v name="$name" -v line="$line" '$1 == name && $2 == line { print $4 }' "$root/support.lock")"
+
+    if [ -z "$newest" ] || [ "$newest" = "null" ]; then
+        echo "- support of $name $line: the end of security fixes could not be read"
+        return
+    fi
+
+    if [ "$current" != "$newest" ]; then
+        echo "- support of $name $line: security fixes end on ${current:-nothing} -> $newest"
+    fi
+}
+
+for line in 8.2 8.3 8.4 8.5; do report_support php "$line" "$(endoflife_end php "$line")"; done
+for line in 8.0 8.4 9.7; do report_support mysql "$line" "$(endoflife_end mysql "$line")"; done
+for line in 10.11 11.4 11.8 12.3; do report_support mariadb "$line" "$(endoflife_end mariadb "$line")"; done
+for line in 14 15 16 17 18; do report_support postgresql "$line" "$(endoflife_end postgresql "$line")"; done
+report_support redis 7.2 "$(endoflife_end redis 7.2)"
+report_support redis 8.2 "$(endoflife_end redis 8.2)"
+report_support redis 8 "$(endoflife_end redis "$(pinned redis-8 | cut -d. -f1-2)")"
+report_support nginx "$(pinned nginx | cut -d. -f1-2)" "$(endoflife_end nginx "$(pinned nginx | cut -d. -f1-2)")"
+report_support httpd 2.4 "$(endoflife_end apache-http-server 2.4)"
+for line in 22 24 26; do report_support node "$line" "$(endoflife_end nodejs "$line")"; done

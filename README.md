@@ -36,6 +36,12 @@ which lists every package with its version line, URL, SHA-256 and license. Node 
 in the manifest too. Nexus downloads them from nodejs.org and getcomposer.org, with the SHA-256
 from `sources.lock`.
 
+`support.lock` gives the support of each version line: whether it is a long-term support
+release, and the last day of security fixes from endoflife.date. The manifest has them as `lts`
+and `security_end`, and Nexus marks a version without security fixes. After a change of
+`support.lock`, the workflow Manifest adds the new data to the published manifest without a new
+build. `scripts/check-updates.sh` reports a date that endoflife.date changed.
+
 `scripts/publish.sh` does this work. `NEXUS_DRY_RUN=1 scripts/publish.sh <folder>` shows what it
 would publish and writes the manifest into the folder, without a change on GitHub.
 

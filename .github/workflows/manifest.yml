@@ -1,0 +1,35 @@
+name: Manifest
+
+# Adds the support data of support.lock to the published manifest. A change of support.lock
+# needs no new build of the packages.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - support.lock
+      - scripts/support.sh
+      - .github/workflows/manifest.yml
+
+permissions:
+  contents: read
+
+jobs:
+  support:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Add the support data to the manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download manifest --repo "$GITHUB_REPOSITORY" --pattern manifest.json --dir "$RUNNER_TEMP"
+          scripts/support.sh "$RUNNER_TEMP/manifest.json"
+          gh release upload manifest "$RUNNER_TEMP/manifest.json" --repo "$GITHUB_REPOSITORY" --clobber
+          jq -r '.packages[] | "\(.name) \(.line): lts \(.lts), security fixes end on \(.security_end // "no date")"' "$RUNNER_TEMP/manifest.json"

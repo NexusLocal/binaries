@@ -31,11 +31,11 @@ jobs:
         run: |
           number="$(gh issue list --state open --search 'in:title "Updates available"' --json number --jq '.[0].number')"
           if [ "$COUNT" = "0" ]; then
-            [ -n "$number" ] && gh issue close "$number" --comment "Every source is on its newest version."
+            [ -n "$number" ] && gh issue close "$number" --comment "Every source is on its newest version. support.lock agrees with endoflife.date."
             exit 0
           fi
           {
-            echo "These sources have a newer upstream release. Update sources.lock, check each SHA-256 against the upstream checksum, and push."
+            echo "Each line names a source with a newer upstream release, or a version line with a new end of security fixes. Update sources.lock or support.lock. Check each new SHA-256 against the upstream checksum. Then push."
             echo
             cat updates.md
           } > body.md
