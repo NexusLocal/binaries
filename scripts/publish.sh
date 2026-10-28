@@ -12,6 +12,8 @@
 # The manifest is the file manifest.json in the release "manifest":
 # https://github.com/NexusLocal/binaries/releases/download/manifest/manifest.json
 #
+# scripts/support.sh adds the support data of each version line from support.lock.
+#
 # Needs gh, jq, curl and shasum.
 
 set -euo pipefail
@@ -105,6 +107,7 @@ add_upstream_entry composer composer 2 phar
 jq -s --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg repository "$repo" \
     '{schema: 1, generated: $generated, repository: $repository, packages: (sort_by(.name, .line))}' \
     "$entries" > "$work/manifest.json"
+"$root/scripts/support.sh" "$work/manifest.json"
 
 if ! gh release view manifest --repo "$repo" > /dev/null 2>&1; then
     gh release create manifest --repo "$repo" --latest=false --title "Manifest" \

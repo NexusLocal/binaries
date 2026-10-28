@@ -1,0 +1,31 @@
+# The support of each version line that Nexus offers (D12 in the Nexus decision record).
+#
+# Each line gives the package name, the version line, "yes" for a long-term support release or
+# "no", and the last day of security fixes. A "-" means that the project gives no end date yet.
+# The dates come from endoflife.date. scripts/support.sh adds them to the manifest, and
+# scripts/check-updates.sh reports a date that endoflife.date changed.
+composer 2 no -
+httpd 2.4 no -
+mariadb 10.11 yes 2028-02-16
+mariadb 11.4 yes 2029-05-29
+mariadb 11.8 yes 2028-06-04
+mariadb 12.3 yes 2029-06-12
+mysql 8.0 no 2026-04-30
+mysql 8.4 yes 2032-04-30
+mysql 9.7 yes 2034-04-30
+nginx 1.30 no -
+node 22 yes 2027-04-30
+node 24 yes 2028-04-30
+node 26 yes 2029-04-30
+php 8.2 no 2026-12-31
+php 8.3 no 2027-12-31
+php 8.4 no 2028-12-31
+php 8.5 no 2029-12-31
+postgresql 14 no 2026-11-12
+postgresql 15 no 2027-11-11
+postgresql 16 no 2028-11-09
+postgresql 17 no 2029-11-08
+postgresql 18 no 2030-11-14
+redis 7.2 no 2029-12-01
+redis 8 no -
+redis 8.2 no 2030-09-01
