@@ -31,8 +31,10 @@ built from. A release that exists already never changes. A recipe sets `PACKAGE_
 when it changes and the upstream version stays the same.
 
 The Nexus app reads
-[`manifest.json`](https://github.com/NexusLocal/binaries/releases/download/manifest/manifest.json),
-which lists every package with its version line, URL, SHA-256 and license. Node and Composer are
+[`manifest.json`](https://github.com/NexusLocal/binaries/releases/latest/download/manifest.json),
+which lists every package with its version line, URL, SHA-256 and license. A release cannot change
+after it is published. So each manifest is a new release, and that release becomes the latest
+release. `scripts/release-manifest.sh` publishes it. Node and Composer are
 in the manifest too. Nexus downloads them from nodejs.org and getcomposer.org, with the SHA-256
 from `sources.lock`.
 

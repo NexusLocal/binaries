@@ -1,6 +1,6 @@
 name: Manifest
 
-# Adds the support data of support.lock to the published manifest. A change of support.lock
+# Publishes a new manifest with the support data of support.lock. A change of support.lock
 # needs no new build of the packages.
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download manifest --repo "$GITHUB_REPOSITORY" --pattern manifest.json --dir "$RUNNER_TEMP"
+          scripts/release-manifest.sh download "$RUNNER_TEMP"
           scripts/support.sh "$RUNNER_TEMP/manifest.json"
-          gh release upload manifest "$RUNNER_TEMP/manifest.json" --repo "$GITHUB_REPOSITORY" --clobber
+          scripts/release-manifest.sh publish "$RUNNER_TEMP/manifest.json"
           jq -r '.packages[] | "\(.name) \(.line): lts \(.lts), security fixes end on \(.security_end // "no date")"' "$RUNNER_TEMP/manifest.json"

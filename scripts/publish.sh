@@ -9,8 +9,9 @@
 # every source archive it was built from. A release that exists already stays as it is, and the
 # manifest uses its files. So a package that the manifest names never changes afterwards.
 #
-# The manifest is the file manifest.json in the release "manifest":
-# https://github.com/NexusLocal/binaries/releases/download/manifest/manifest.json
+# scripts/release-manifest.sh publishes the manifest as a new release, which becomes the latest
+# release:
+# https://github.com/NexusLocal/binaries/releases/latest/download/manifest.json
 #
 # scripts/support.sh adds the support data of each version line from support.lock.
 #
@@ -109,14 +110,11 @@ jq -s --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg repository "$repo" 
     "$entries" > "$work/manifest.json"
 "$root/scripts/support.sh" "$work/manifest.json"
 
-if ! gh release view manifest --repo "$repo" > /dev/null 2>&1; then
-    gh release create manifest --repo "$repo" --latest=false --title "Manifest" \
-        --notes "manifest.json lists every package that Nexus can install. It changes with every release."
-fi
-gh release upload manifest "$work/manifest.json" --repo "$repo" --clobber
-
 if [ "${NEXUS_DRY_RUN:-}" = "1" ]; then
+    echo "[dry run] scripts/release-manifest.sh publish manifest.json" >&2
     cp "$work/manifest.json" "$dist/manifest.json"
+else
+    "$root/scripts/release-manifest.sh" publish "$work/manifest.json"
 fi
 
 echo "==> the manifest lists $(jq '.packages | length' "$work/manifest.json") packages"
