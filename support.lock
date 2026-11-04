@@ -5,6 +5,7 @@
 # The dates come from endoflife.date. scripts/support.sh adds them to the manifest, and
 # scripts/check-updates.sh reports a date that endoflife.date changed.
 composer 2 no -
+mailpit 1 no -
 httpd 2.4 no -
 mariadb 10.11 yes 2028-02-16
 mariadb 11.4 yes 2029-05-29
