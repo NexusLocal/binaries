@@ -12,6 +12,7 @@ tests/nginx.sh /tmp/nexus-build/out/nginx-1.30.6-macos-arm64.tar.xz
 
 ./build.sh php 8.5
 tests/php.sh /tmp/nexus-build/out/php-8.5.12-macos-arm64.tar.xz
+tests/wp-cli.sh /tmp/nexus-build/out/php-8.5.12-macos-arm64.tar.xz
 
 ./build.sh httpd
 tests/httpd.sh /tmp/nexus-build/out/httpd-2.4.69-macos-arm64.tar.xz
@@ -34,9 +35,9 @@ The Nexus app reads
 [`manifest.json`](https://github.com/NexusLocal/binaries/releases/latest/download/manifest.json),
 which lists every package with its version line, URL, SHA-256 and license. A release cannot change
 after it is published. So each manifest is a new release, and that release becomes the latest
-release. `scripts/release-manifest.sh` publishes it. Node and Composer are
-in the manifest too. Nexus downloads them from nodejs.org and getcomposer.org, with the SHA-256
-from `sources.lock`.
+release. `scripts/release-manifest.sh` publishes it. Node, Composer and WP-CLI are in the
+manifest too. Nexus downloads them from nodejs.org, getcomposer.org and the GitHub releases of
+WP-CLI, with the SHA-256 from `sources.lock`.
 
 `support.lock` gives the support of each version line: whether it is a long-term support
 release, and the last day of security fixes from endoflife.date. The manifest has them as `lts`

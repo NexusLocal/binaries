@@ -104,6 +104,7 @@ add_upstream_entry node-22 node 22 tar.xz
 add_upstream_entry node-24 node 24 tar.xz
 add_upstream_entry node-26 node 26 tar.xz
 add_upstream_entry composer composer 2 phar
+add_upstream_entry wp-cli wp-cli 2 phar
 
 jq -s --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg repository "$repo" \
     '{schema: 1, generated: $generated, repository: $repository, packages: (sort_by(.name, .line))}' \

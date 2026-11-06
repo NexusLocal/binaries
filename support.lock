@@ -30,3 +30,4 @@ postgresql 18 no 2030-11-14
 redis 7.2 no 2029-12-01
 redis 8 no -
 redis 8.2 no 2030-09-01
+wp-cli 2 no -

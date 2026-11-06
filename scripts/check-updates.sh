@@ -63,6 +63,9 @@ report openssl "$(endoflife_latest openssl 3.5)"
 for line in 22 24 26; do report "node-$line" "$(node_latest "$line")"; done
 report composer "$(curl -fsS --max-time 30 https://getcomposer.org/versions | jq -r '.stable[0].version')"
 report mailpit "$(github_latest axllent/mailpit)"
+report wp-cli "$(github_latest wp-cli/wp-cli)"
+report wordpress "$(curl -fsS --max-time 30 https://api.wordpress.org/core/version-check/1.7/ | jq -r '.offers[0].version')"
+report sqlite-database-integration "$(curl -fsS --max-time 30 https://api.wordpress.org/plugins/info/1.0/sqlite-database-integration.json | jq -r .version)"
 
 report pcre2 "$(github_latest PCRE2Project/pcre2 pcre2-)"
 report zlib "$(github_latest madler/zlib)"
