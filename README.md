@@ -15,7 +15,7 @@ tests/php.sh /tmp/nexus-build/out/php-8.5.12-macos-arm64.tar.xz
 tests/wp-cli.sh /tmp/nexus-build/out/php-8.5.12-macos-arm64.tar.xz
 
 ./build.sh httpd
-tests/httpd.sh /tmp/nexus-build/out/httpd-2.4.69-macos-arm64.tar.xz
+tests/httpd.sh /tmp/nexus-build/out/httpd-2.4.70-macos-arm64.tar.xz
 ```
 
 The build uses `/tmp/nexus-build`. Set `NEXUS_BUILD_ROOT` to use another folder. The path must

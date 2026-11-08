@@ -3,7 +3,7 @@
 # Tests an Apache httpd package in a folder with a space in its path, the same as
 # ~/Library/Application Support/Nexus:
 #
-#   tests/httpd.sh /tmp/nexus-build/out/httpd-2.4.69-macos-arm64.tar.xz
+#   tests/httpd.sh /tmp/nexus-build/out/httpd-2.4.70-macos-arm64.tar.xz
 
 set -euo pipefail
 
