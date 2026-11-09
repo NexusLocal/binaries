@@ -7,7 +7,10 @@ PHP_PREFIX=/var/empty/nexus/php
 # blake2b_final, so in a static link argon2 called the libsodium versions with a smaller struct
 # and overflowed its stack. ext/sodium provides PASSWORD_ARGON2I and PASSWORD_ARGON2ID itself.
 PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml openldap postgresql-18 imagemagick"
-PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick"
+PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick mailparse"
+
+# Revision 2 adds mailparse to the PHP versions of revision 1.
+PHP_REVISION=2
 
 # igbinary 3.2.16 is the newest stable release and does not compile against PHP 8.5, which
 # moved php_smart_string.h. Only the release candidate 3.2.17RC1 supports PHP 8.5.
@@ -182,10 +185,11 @@ build_product() {
     build_pecl_extension "$package" pecl-apcu
     build_pecl_extension "$package" pecl-yaml --with-yaml="$STAGE_DIR"
     PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" pecl-imagick --with-imagick="$STAGE_DIR"
+    build_pecl_extension "$package" pecl-mailparse
 
     add_license "$package" php "$src/LICENSE"
     write_source_file "$package" "$source_name" $PHP_LIBRARIES "$(igbinary_source "$minor")" \
         $(for name in $PHP_EXTENSIONS; do echo "pecl-$name"; done)
 
-    archive_package php "$version" "PHP-3.01"
+    PACKAGE_REVISION="$PHP_REVISION" archive_package php "$version" "PHP-3.01"
 }

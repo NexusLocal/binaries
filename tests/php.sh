@@ -134,6 +134,19 @@ foreach (["png", "jpeg", "webp"] as $format) {
 echo "  ImageMagick ", Imagick::getVersion()["versionString"], "\n";
 '
 
+echo "==> mailparse reads the parts of a mail"
+"$php" -n -d "extension_dir=$extensions" -d extension=mailparse -r '
+$mail = mailparse_msg_create();
+mailparse_msg_parse($mail, "From: Ann <ann@example.test>\r\nSubject: Hi\r\nContent-Type: text/plain\r\n\r\nHello\r\n");
+$headers = mailparse_msg_get_part_data($mail)["headers"];
+$address = mailparse_rfc822_parse_addresses($headers["from"])[0]["address"];
+if ($headers["subject"] !== "Hi" || $address !== "ann@example.test") {
+    fwrite(STDERR, "error: mailparse read the mail wrong\n");
+    exit(1);
+}
+echo "  mailparse ", phpversion("mailparse"), "\n";
+'
+
 echo "==> php-config gives paths inside the package"
 prefix="$("$root/bin/php-config" --prefix)"
 [ "$prefix" = "$root" ] || { echo "error: php-config --prefix gives $prefix" >&2; exit 1; }

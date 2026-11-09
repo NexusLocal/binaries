@@ -82,7 +82,7 @@ report libyaml "$(github_latest yaml/libyaml "")"
 report imagemagick "$(github_latest ImageMagick/ImageMagick "")"
 report cmake "$(github_latest Kitware/CMake)"
 report ninja "$(github_latest ninja-build/ninja)"
-for extension in xdebug pcov redis apcu yaml imagick; do report "pecl-$extension" "$(pecl_latest "$extension")"; done
+for extension in xdebug pcov redis apcu yaml imagick mailparse; do report "pecl-$extension" "$(pecl_latest "$extension")"; done
 
 # The last day of security fixes in support.lock, against endoflife.date. The LTS flags are not
 # compared: endoflife.date gives a date for some of them, and the decision record sets them.

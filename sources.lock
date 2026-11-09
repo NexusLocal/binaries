@@ -33,6 +33,7 @@ pecl-redis 6.3.0 0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b
 pecl-igbinary 3.2.16 8bf25d465abc7973d9e2c9a3039a5f8eea635b23bc1477017ff3999ff95836da https://pecl.php.net/get/igbinary-3.2.16.tgz
 pecl-apcu 5.1.28 ca9c1820810a168786f8048a4c3f8c9e3fd941407ad1553259fb2e30b5f057bf https://pecl.php.net/get/apcu-5.1.28.tgz
 pecl-yaml 2.3.0 bc8404807a3a4dc896b310af21a7f8063aa238424ff77f27eb6ffa88b5874b8a https://pecl.php.net/get/yaml-2.3.0.tgz
+pecl-mailparse 3.2.0 cc5111ae17bfa36efcc5ef23dcf75b6501593ac264c196aad3e39cd4ad765332 https://pecl.php.net/get/mailparse-3.2.0.tgz
 composer 2.11.1 6f1b891e1d4927d62740276c540fb490e47689e19e102c49e8da849794882f8c https://getcomposer.org/download/2.11.1/composer.phar
 wp-cli 2.12.0 ce34ddd838f7351d6759068d09793f26755463b4a4610a5a5c0a97b68220d85c https://github.com/wp-cli/wp-cli/releases/download/v2.12.0/wp-cli-2.12.0.phar
 wordpress 7.1.4 a147146c159362778ecbbbfb07bb20ddf4e85b130f971c824e656a8f938c5f87 https://downloads.wordpress.org/release/wordpress-7.1.4.zip
