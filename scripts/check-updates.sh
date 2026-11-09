@@ -5,8 +5,8 @@
 #
 #   scripts/check-updates.sh
 #
-# It changes nothing. A new version needs a new pinned SHA-256 in sources.lock, and a person
-# checks that against the upstream checksum.
+# It changes nothing. scripts/update-sources.sh reads this list and updates sources.lock after a
+# check of each download against the checksum of upstream.
 #
 # Needs curl and jq.
 

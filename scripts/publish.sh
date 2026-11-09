@@ -97,6 +97,7 @@ if [ "${NEXUS_DRY_RUN:-}" = "1" ]; then
 fi
 
 for json in "$dist"/*-macos-arm64.json; do
+    [ -e "$json" ] || continue
     publish_package "$json"
 done
 
@@ -105,6 +106,40 @@ add_upstream_entry node-24 node 24 tar.xz
 add_upstream_entry node-26 node 26 tar.xz
 add_upstream_entry composer composer 2 phar
 add_upstream_entry wp-cli wp-cli 2 phar
+
+# A build that failed gives no package. That line keeps the package of the newest manifest, so a
+# problem of one package does not hold back the updates of the others. Only a line of
+# support.lock stays, so a line that Nexus no longer offers goes away.
+keep_previous_entries() {
+    local previous="$work/previous"
+    mkdir -p "$previous"
+
+    if ! "$root/scripts/release-manifest.sh" download "$previous" > /dev/null; then
+        echo "==> no earlier manifest, so no package is kept"
+        return
+    fi
+
+    jq -c '.packages[]' "$previous/manifest.json" | while read -r entry; do
+        local name line
+        name="$(echo "$entry" | jq -r .name)"
+        line="$(echo "$entry" | jq -r .line)"
+
+        if jq -e --arg name "$name" --arg line "$line" 'select(.name == $name and .line == $line)' "$entries" > /dev/null; then
+            continue
+        fi
+
+        if ! awk -v name="$name" -v line="$line" '$1 == name && $2 == line { found = 1 } END { exit !found }' "$root/support.lock"; then
+            continue
+        fi
+
+        echo "==> $name $line keeps $(echo "$entry" | jq -r .version) of the newest manifest"
+        echo "$entry" | jq -c 'del(.security_end, .lts)' >> "$entries"
+    done
+}
+
+if [ "${NEXUS_DRY_RUN:-}" != "1" ]; then
+    keep_previous_entries
+fi
 
 jq -s --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg repository "$repo" \
     '{schema: 1, generated: $generated, repository: $repository, packages: (sort_by(.name, .line))}' \

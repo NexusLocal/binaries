@@ -97,9 +97,11 @@ jobs:
       - name: Test WP-CLI
         run: tests/wp-cli.sh dist/php-${{ matrix.php }}*-macos-arm64.tar.xz
 
+  # A package whose build or test failed has no artifact. scripts/publish.sh keeps its package of
+  # the newest manifest, so the other packages still get their update.
   release:
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -117,4 +119,27 @@ jobs:
       - name: Publish the releases and the manifest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: scripts/publish.sh dist
+        run: |
+          mkdir -p dist
+          scripts/publish.sh dist
+
+  # The owner gets an issue, and so an email, when a build or a test fails on main.
+  report:
+    needs: [build, release]
+    if: ${{ failure() && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Open or update the issue "Build failed"
+        run: |
+          title="Build failed"
+          body="The build of $GITHUB_SHA failed: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. The packages that passed were published. The others keep their last package."
+          number="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$title\"" --json number --jq '.[0].number')"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" --assignee RoodFruit
+          fi

@@ -1,46 +1,92 @@
 name: Updates
 
+# Each day: updates sources.lock and support.lock to the newest upstream release in each version
+# line, after a check of each download against the checksum of upstream (scripts/update-sources.sh).
+# A push with GITHUB_TOKEN starts no other workflow, so this workflow starts the build or the
+# manifest itself. A failed update and a new version line each get an issue for the owner.
 on:
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "17 5 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: updates
+  cancel-in-progress: false
+
 jobs:
-  check:
+  update:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       issues: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OWNER: RoodFruit
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - name: Look for newer upstream releases
-        id: check
-        run: |
-          scripts/check-updates.sh > updates.md
-          cat updates.md
-          echo "count=$(grep -c '^- ' updates.md || true)" >> "$GITHUB_OUTPUT"
+      - name: Update the sources and the support data
+        run: scripts/update-sources.sh "$RUNNER_TEMP/summary.md"
 
-      - name: Keep the issue "Updates available" current
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COUNT: ${{ steps.check.outputs.count }}
+      - name: Commit and start the build or the manifest
         run: |
-          number="$(gh issue list --state open --search 'in:title "Updates available"' --json number --jq '.[0].number')"
-          if [ "$COUNT" = "0" ]; then
-            [ -n "$number" ] && gh issue close "$number" --comment "Every source is on its newest version. support.lock agrees with endoflife.date."
+          if git diff --quiet; then
+            echo "Every source is on its newest version."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          {
+            echo "Update the sources automatically"
+            echo
+            grep -v '^- failed' "$RUNNER_TEMP/summary.md" | grep -v 'needs the choice of the owner' || true
+          } > "$RUNNER_TEMP/message.txt"
+          sources_changed="$(git diff --quiet -- sources.lock && echo no || echo yes)"
+          git add sources.lock support.lock
+          git commit -F "$RUNNER_TEMP/message.txt"
+          git push origin HEAD:main
+          if [ "$sources_changed" = "yes" ]; then
+            gh workflow run build.yml --ref main
+          else
+            gh workflow run manifest.yml --ref main
+          fi
+
+      - name: Report failed updates
+        run: |
+          title="Automatic update failed"
+          number="$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')"
+          if ! grep -qE '^- (failed|.*needs the choice of the owner)' "$RUNNER_TEMP/summary.md"; then
+            [ -n "$number" ] && gh issue close "$number" --comment "The last run updated every source."
             exit 0
           fi
           {
-            echo "Each line names a source with a newer upstream release, or a version line with a new end of security fixes. Update sources.lock or support.lock. Check each new SHA-256 against the upstream checksum. Then push."
+            echo "The automatic update of $(date -u +%Y-%m-%d) could not update these sources. The other sources were updated."
             echo
-            cat updates.md
-          } > body.md
+            grep -E '^- (failed|.*needs the choice of the owner)' "$RUNNER_TEMP/summary.md"
+          } > "$RUNNER_TEMP/body.md"
           if [ -n "$number" ]; then
-            gh issue edit "$number" --body-file body.md
+            gh issue edit "$number" --body-file "$RUNNER_TEMP/body.md"
           else
-            gh issue create --title "Updates available" --body-file body.md
+            gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md" --assignee "$OWNER"
           fi
+
+      - name: Report new version lines
+        run: |
+          scripts/check-lines.sh > "$RUNNER_TEMP/lines.md"
+          cat "$RUNNER_TEMP/lines.md"
+          sed -n 's/^- //p' "$RUNNER_TEMP/lines.md" | while read -r line; do
+            title="New version line: $line"
+            if [ -n "$(gh issue list --state all --search "in:title \"$title\"" --json number --jq '.[0].number')" ]; then
+              continue
+            fi
+            gh issue create --title "$title" --assignee "$OWNER" --body "$line is out. Nexus does not offer it yet. A new version line needs a choice: add it to sources.lock, support.lock, the build matrix and the decision record (D12)."
+          done
+
+      - name: Close the old issue "Updates available"
+        run: |
+          number="$(gh issue list --state open --search 'in:title "Updates available"' --json number --jq '.[0].number')"
+          [ -z "$number" ] || gh issue close "$number" --comment "The Updates workflow now updates the sources itself each day."

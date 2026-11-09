@@ -46,7 +46,26 @@ and `security_end`, and Nexus marks a version without security fixes. After a ch
 build. `scripts/check-updates.sh` reports a date that endoflife.date changed.
 
 `scripts/publish.sh` does this work. `NEXUS_DRY_RUN=1 scripts/publish.sh <folder>` shows what it
-would publish and writes the manifest into the folder, without a change on GitHub.
+would publish and writes the manifest into the folder, without a change on GitHub. A package
+whose build failed keeps its package of the newest manifest. So one failure does not hold back
+the updates of the other packages.
+
+## Automatic updates
+
+The workflow Updates runs each day. `scripts/update-sources.sh` updates `sources.lock` to the
+newest release in each version line, and `support.lock` to the newest end of security fixes. It
+checks each download against the checksum that upstream publishes. A source without such a
+checksum (PECL, MySQL, nginx, GNU and the tag archives of GitHub) is downloaded twice, and both
+downloads must be the same. Then the workflow commits, pushes and starts the build. No person is
+needed for an update in a version line.
+
+The owner gets an issue, and so an email, in three cases:
+
+- **Automatic update failed:** a download or a checksum failed, or a package has a new major
+  version.
+- **Build failed:** a build or a test failed on `main`.
+- **New version line:** `scripts/check-lines.sh` found a new line upstream, for example PHP 8.6
+  or Node.js 27. A new line needs a choice of the owner, so the workflow adds nothing.
 
 ## Rules
 
