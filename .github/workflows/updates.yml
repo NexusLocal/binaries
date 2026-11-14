@@ -32,23 +32,32 @@ jobs:
       - name: Update the sources and the support data
         run: scripts/update-sources.sh "$RUNNER_TEMP/summary.md"
 
+      # The rules of main accept only signed commits. A commit that the GraphQL API makes with
+      # GITHUB_TOKEN gets the signature of GitHub. A git push of a local commit has none.
       - name: Commit and start the build or the manifest
         run: |
           if git diff --quiet; then
             echo "Every source is on its newest version."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          {
-            echo "Update the sources automatically"
-            echo
-            grep -v '^- failed' "$RUNNER_TEMP/summary.md" | grep -v 'needs the choice of the owner' || true
-          } > "$RUNNER_TEMP/message.txt"
+          grep -v '^- failed' "$RUNNER_TEMP/summary.md" | grep -v 'needs the choice of the owner' > "$RUNNER_TEMP/body.txt" || true
           sources_changed="$(git diff --quiet -- sources.lock && echo no || echo yes)"
-          git add sources.lock support.lock
-          git commit -F "$RUNNER_TEMP/message.txt"
-          git push origin HEAD:main
+          jq -n \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg head "$(git rev-parse HEAD)" \
+            --rawfile body "$RUNNER_TEMP/body.txt" \
+            --arg sources "$(base64 -w0 sources.lock)" \
+            --arg support "$(base64 -w0 support.lock)" \
+            '{
+              query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid url } } }",
+              variables: {input: {
+                branch: {repositoryNameWithOwner: $repository, branchName: "main"},
+                expectedHeadOid: $head,
+                message: {headline: "Update the sources automatically", body: $body},
+                fileChanges: {additions: [{path: "sources.lock", contents: $sources}, {path: "support.lock", contents: $support}]}
+              }}
+            }' > "$RUNNER_TEMP/commit.json"
+          gh api graphql --input "$RUNNER_TEMP/commit.json" --jq '.data.createCommitOnBranch.commit.url'
           if [ "$sources_changed" = "yes" ]; then
             gh workflow run build.yml --ref main
           else
