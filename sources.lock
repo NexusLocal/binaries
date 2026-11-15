@@ -40,7 +40,7 @@ wordpress 7.1.4 a147146c159362778ecbbbfb07bb20ddf4e85b130f971c824e656a8f938c5f87
 sqlite-database-integration 3.1.3 f6ce35e8419d0b9326221a907627d905e25c2a5ba2afc86492811f14c851efe0 https://downloads.wordpress.org/plugin/sqlite-database-integration.3.1.3.zip
 openldap 2.6.16 8d8452bc3f56aa7a392c62dd377733f83d1314eed6c52fe44028439a3bb4df18 https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-2.6.16.tgz
 pecl-igbinary-rc 3.2.17RC1 91da821443db125282a6aea039f24588dd28ff5d71e8187f6ecc41165bceafbc https://pecl.php.net/get/igbinary-3.2.17RC1.tgz
-httpd 2.4.70 1eefd7dc95836c5872894ce8e6a37f773d5a6764f0766869d39b8bcf0b1bafc3 https://archive.apache.org/dist/httpd/httpd-2.4.70.tar.bz2
+httpd 2.4.71 2bc5da5a33c247341de082717d4ebcb5cb49e8b73a05b7fddf7d5d6dc2f8de62 https://archive.apache.org/dist/httpd/httpd-2.4.71.tar.bz2
 apr 1.7.6 49030d92d2575da735791b496dc322f3ce5cff9494779ba8cc28c7f46c5deb32 https://archive.apache.org/dist/apr/apr-1.7.6.tar.bz2
 apr-util 1.6.5 96de1dd6f6a0476d2d2e7964926d8c1ddc3bb0e210e1b1812d3ba5a454a392e2 https://archive.apache.org/dist/apr/apr-util-1.6.5.tar.bz2
 nghttp2 1.71.0 c0f55121d88650e4b9227aec28cebaf664d2417ca60fe70be0f8d38829f52116 https://github.com/nghttp2/nghttp2/releases/download/v1.71.0/nghttp2-1.71.0.tar.xz
@@ -54,10 +54,10 @@ mysql-9.7 9.7.4 abf378ff27753325c908d687a3060f025c58b6530eda53ff4a0c6fc5ff3d7716
 mysql-8.0-source 8.0.46 e0d1a98ae5188c6a4efed74c74ff28115d4b791bc9d591a78e14d20aded67344 https://cdn.mysql.com/Downloads/MySQL-8.0/mysql-8.0.46.tar.gz
 mysql-8.4-source 8.4.13 f6ddc7f7fb6462bab8b533b13c06af3fff57fa9ca12259b81ab13cd9930b9d58 https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13.tar.gz
 mysql-9.7-source 9.7.4 9188eb1abec42b8ab8bb69948492f06258dd27e6aabd13e2d4c6197dbcde75b2 https://cdn.mysql.com/Downloads/MySQL-9.7/mysql-9.7.4.tar.gz
-mariadb-10.11 10.11.19 b8e543ee69d380fb1cfd563226f49e0fe96e4d67e7b7a9045ee514a168ed2066 https://archive.mariadb.org/mariadb-10.11.19/source/mariadb-10.11.19.tar.gz
-mariadb-11.4 11.4.13 1bb254b106d0a7ca871cfa18fa6e18d4b80a7430f9ec9d1571ec4271a13def96 https://archive.mariadb.org/mariadb-11.4.13/source/mariadb-11.4.13.tar.gz
-mariadb-11.8 11.8.9 2e015b7e91004142eda8b3a20d3ceb875cf2ae55e72603e7222cd497d4e56fc6 https://archive.mariadb.org/mariadb-11.8.9/source/mariadb-11.8.9.tar.gz
-mariadb-12.3 12.3.3 e99d739fd4a55f9a11dea7bd2287a262673e287550af3071c8469dd2bec0c163 https://archive.mariadb.org/mariadb-12.3.3/source/mariadb-12.3.3.tar.gz
+mariadb-10.11 10.11.20 ac5c003f725950a4cbf9829bd9b191b73f8ab0f2630d6dbc6292fc5244d3c7cb https://archive.mariadb.org/mariadb-10.11.20/source/mariadb-10.11.20.tar.gz
+mariadb-11.4 11.4.14 5295025835da449871518606f50c1134047df978e43939e4553737dd078e1261 https://archive.mariadb.org/mariadb-11.4.14/source/mariadb-11.4.14.tar.gz
+mariadb-11.8 11.8.10 77d62a86477d5b836da960f5228eb4e13458692ab775f2ad95d55fd4a4d3b117 https://archive.mariadb.org/mariadb-11.8.10/source/mariadb-11.8.10.tar.gz
+mariadb-12.3 12.3.4 75aae4d48df905734e24a85b955bbcdc43f4b122b450bc4ad2bc92f5d1ac578d https://archive.mariadb.org/mariadb-12.3.4/source/mariadb-12.3.4.tar.gz
 postgresql-14 14.25 09af980eb3a5d0a8ad7a34b95031b1988bbcd430c87700a62d6234c0ed97ae4c https://ftp.postgresql.org/pub/source/v14.25/postgresql-14.25.tar.bz2
 postgresql-15 15.20 30e65cbbb771a39b553ed2df7e65622e65647aed55dbc19bd0fe853ff0a08442 https://ftp.postgresql.org/pub/source/v15.20/postgresql-15.20.tar.bz2
 postgresql-16 16.16 9d5cd8633043b75740d5d59749c6b7365e6aeb53c47098b1a5e80bb18f87881a https://ftp.postgresql.org/pub/source/v16.16/postgresql-16.16.tar.bz2
