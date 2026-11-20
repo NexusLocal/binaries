@@ -10,7 +10,7 @@ headers-more 0.41 800eba641c29b89dfd00a97ccac314a2b7768bdd85ea37ed819452494a5633
 geoip2 3.4 ad72fc23348d715a330994984531fab9b3606e160483236737f9a4a6957d9452 https://github.com/leev/ngx_http_geoip2_module/archive/refs/tags/3.4.tar.gz
 libmaxminddb 1.14.1 ca5c87d41339f8bc4daabb53e8a9356b3c995f2d2419b85d7bff823b2ecc252d https://github.com/maxmind/libmaxminddb/releases/download/1.14.1/libmaxminddb-1.14.1.tar.gz
 njs 1.0.2 84a114499fa6878d3ec52b99c1cf2874a91eb0d915408f418a2b1279519f09ae https://github.com/nginx/njs/archive/refs/tags/1.0.2.tar.gz
-nginx 1.30.6 3cf46f5ed7504d460125866b7bea99fb357f31d887e2e63b35503310e9b8b6c8 https://nginx.org/download/nginx-1.30.6.tar.gz
+nginx 1.30.7 2565b5c837050e958f70fb0f73c48e2bca4542ad349fd356f46fb0c72610bc6e https://nginx.org/download/nginx-1.30.7.tar.gz
 m4 1.4.21 f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66 https://ftp.gnu.org/gnu/m4/m4-1.4.21.tar.xz
 autoconf 2.73 9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e https://ftp.gnu.org/gnu/autoconf/autoconf-2.73.tar.xz
 icu 79.1 06fa63ecb521048f8082f12ad988f6b678d90cbd88aafce24cbc94902b191d99 https://github.com/unicode-org/icu/releases/download/release-79.1/icu4c-79.1-sources.tgz
