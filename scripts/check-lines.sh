@@ -9,6 +9,7 @@
 # workflow opens an issue for it and changes nothing. Old lines that Nexus left out on purpose
 # do not count: only a line newer than the newest line of support.lock does. MySQL and MariaDB
 # count only with a long-term support release, because their other releases come each quarter.
+# cloudflared has no report here. Its one line 1 takes each release, also in a new year.
 #
 # Needs curl and jq.
 

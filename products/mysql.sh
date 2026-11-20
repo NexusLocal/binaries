@@ -27,6 +27,10 @@ build_product() {
     source_name="$(mysql_source "${1:-}")"
     version="$(source_version "$source_name")"
 
+    if [ "$(source_version "$source_name-source")" != "$version" ]; then
+        fail "sources.lock has $source_name $version but $source_name-source $(source_version "$source_name-source"). Both need the same version."
+    fi
+
     log "Repackaging the official MySQL $version build"
     src="$(unpack "$source_name")"
 

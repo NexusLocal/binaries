@@ -32,6 +32,7 @@ jobs:
           - { name: redis-8.2, product: redis, version: "8.2" }
           - { name: redis-8.10, product: redis, version: "8" }
           - { name: mailpit, product: mailpit, version: "" }
+          - { name: cloudflared, product: cloudflared, version: "" }
           - { name: mysql-8.0, product: mysql, version: "8.0" }
           - { name: mysql-8.4, product: mysql, version: "8.4" }
           - { name: mysql-9.7, product: mysql, version: "9.7" }

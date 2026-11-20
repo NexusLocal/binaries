@@ -20,6 +20,8 @@
 # A source without an upstream checksum (PECL, MySQL, nginx, GNU and the tag archives of GitHub)
 # is downloaded twice, and both downloads must give the same SHA-256.
 #
+# A package with a source archive of its own (<name>-source) gets both in one update.
+#
 # The summary file gets one line for each update and one line for each update that failed. The
 # exit code is 0 also when an update failed, so the other updates still go out.
 #
@@ -77,28 +79,13 @@ upstream_checksum() {
     esac
 }
 
-update_source() {
-    local name="$1" current="$2" newest="$3" fields url new_url file sha256 expected method
+# Downloads the new version of one source and checks it against the checksum of upstream. Prints
+# the new line of sources.lock, a tab and the method of the check. A failure goes to the summary
+# and prints nothing.
+checked_line() {
+    local name="$1" current="$2" newest="$3" url new_url file sha256 expected method
 
-    # These packages have one line that follows the newest release. A new major version is a new
-    # line, and scripts/check-lines.sh reports it.
-    case "$name" in
-        mailpit | composer | wp-cli | redis-8)
-            if [ "${newest%%.*}" != "${current%%.*}" ]; then
-                echo "- $name: $newest is a new major version. It needs the choice of the owner." >> "$summary"
-                return
-            fi
-            ;;
-    esac
-
-    fields="$(awk -v name="$name" '$1 == name' "$lock")"
-    url="$(echo "$fields" | awk '{print $4}')"
-
-    if [ -z "$url" ]; then
-        echo "- $name: not in sources.lock, so nothing changed" >> "$summary"
-        return
-    fi
-
+    url="$(awk -v name="$name" '$1 == name { print $4 }' "$lock")"
     new_url="${url//$current/$newest}"
     file="$work/$name-${new_url##*/}"
 
@@ -134,9 +121,50 @@ update_source() {
             ;;
     esac
 
-    awk -v name="$name" -v line="$name $newest $sha256 $new_url" '$1 == name { print line; next } { print }' "$lock" > "$work/sources.lock"
+    printf '%s %s %s %s\t%s\n' "$name" "$newest" "$sha256" "$new_url" "$method"
+}
+
+replace_line() {
+    awk -v name="$1" -v line="$2" '$1 == name { print line; next } { print }' "$lock" > "$work/sources.lock"
     cat "$work/sources.lock" > "$lock"
-    echo "- $name: $current -> $newest ($method)" >> "$summary"
+}
+
+update_source() {
+    local name="$1" current="$2" newest="$3" result source_current source_result
+
+    # These packages have one line that follows the newest release. A new major version is a new
+    # line, and scripts/check-lines.sh reports it. cloudflared is not in this list. Its version
+    # starts with the year. Its one line 1 takes each release.
+    case "$name" in
+        mailpit | composer | wp-cli | redis-8)
+            if [ "${newest%%.*}" != "${current%%.*}" ]; then
+                echo "- $name: $newest is a new major version. It needs the choice of the owner." >> "$summary"
+                return
+            fi
+            ;;
+    esac
+
+    if [ -z "$(awk -v name="$name" '$1 == name { print $4 }' "$lock")" ]; then
+        echo "- $name: not in sources.lock, so nothing changed" >> "$summary"
+        return
+    fi
+
+    result="$(checked_line "$name" "$current" "$newest")"
+    [ -n "$result" ] || return
+
+    # A package with a source archive of its own (MySQL and cloudflared) gets both in one update.
+    # So the SOURCE file of the package always names the source of the same version. The source
+    # line can have an older version than its package. So the new URL starts from its own version.
+    source_current="$(awk -v name="$name-source" '$1 == name { print $2 }' "$lock")"
+
+    if [ -n "$source_current" ] && [ "$source_current" != "$newest" ]; then
+        source_result="$(checked_line "$name-source" "$source_current" "$newest")"
+        [ -n "$source_result" ] || return
+        replace_line "$name-source" "${source_result%%$'\t'*}"
+    fi
+
+    replace_line "$name" "${result%%$'\t'*}"
+    echo "- $name: $current -> $newest (${result#*$'\t'})" >> "$summary"
 }
 
 # The last day of security fixes comes from endoflife.date, as scripts/check-updates.sh reads it.
