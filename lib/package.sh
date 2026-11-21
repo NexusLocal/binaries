@@ -39,30 +39,32 @@ add_license_from_comment() {
 }
 
 # Copies each license file of a Go module or an npm package to a folder of the package. A file in
-# a subfolder counts too, because it can be the license of code from another project. Test data
-# and nested node_modules do not count. Returns 1 when the module or package has no license file.
+# a subfolder counts too, because it can be the license of code from another project. Test data,
+# nested node_modules and source code such as license.go do not count. Returns 1 when the module
+# or package has no license file.
 copy_license_files() {
     local from="$1" to="$2" files file
 
     files="$(cd "$from" && find . -type f | sed 's|^\./||' | LC_ALL=C sort |
         grep -i -E '(^|/)(licen[cs]e|copying|notice|patents|unlicense|third[-_]party[-_]licen[cs]es?)[^/]*$|(^|/)licen[cs]es/[^/]+$|\.licen[cs]e\.txt$' |
-        grep -v -E '(^|/)(testdata|node_modules)/')" || return 1
+        grep -v -E '(^|/)(testdata|node_modules)/' |
+        grep -v -i -E '\.([cm]?js|[cm]?ts|jsx|tsx|map|json|go|s|c|h|cc|cpp|py|rb|sh|vue|css|scss)$')" || return 1
 
     while IFS= read -r file; do
-        mkdir -p "$to/$(dirname "$file")"
+        mkdir -p "$to/$(dirname "$file")" || fail "could not make a folder for $from/$file"
 
         case "$file" in
-            *.gz) gunzip -c "$from/$file" > "$to/${file%.gz}" ;;
-            *) cp "$from/$file" "$to/$file" ;;
+            *.gz) gunzip -c "$from/$file" > "$to/${file%.gz}" || fail "could not unpack the license file $from/$file" ;;
+            *) cp "$from/$file" "$to/$file" || fail "could not copy the license file $from/$file" ;;
         esac
     done <<< "$files"
 }
 
 # A Go binary lists the modules in it with the go.sum hash of each module. Each hash must be the
 # same as in go.sum of the source of the same tag. Go downloads each module and checks it against
-# the checksum database of Go, and the build checks it against go.sum. Then the license files of
+# the checksum database of Go. The build also checks it against go.sum. Then the license files of
 # each module go to licenses/go-modules/<module>@<version>/. The runtime of Go is in each Go
-# binary, so the license of Go goes in too. That text is the same in each version of Go.
+# binary. So the license of Go goes in too. That text is the same in each version of Go.
 add_go_licenses() {
     local package="$1" binary="$2" source="$3" work path version sum dir
     work="$WORK_DIR/go-licenses-$(basename "$binary")"
@@ -80,6 +82,11 @@ add_go_licenses() {
     [ -s "$work/modules.txt" ] || fail "$binary has no Go modules in its build information"
 
     while read -r path version sum; do
+        case "$path" in
+            .* | /*) fail "$binary has a module from the local folder $path. The build cannot check the license of a local module." ;;
+        esac
+
+        [ -n "$sum" ] || fail "$binary has no hash for the module $path $version"
         grep -q -F -x "$path $version $sum" "$source/go.sum" || fail "the hash of $path $version in $binary is not in go.sum of the source"
     done < "$work/modules.txt"
 
@@ -102,7 +109,7 @@ add_go_licenses() {
 # development is downloaded from that URL and checked against that hash. Then its license files
 # go to licenses/npm-packages/<package>@<version>/. Some packages have their license only at the
 # end of README.md. Then the README.md from the License heading to the end goes in.
-# licenses/npm-packages.txt lists the packages, so a test can find a missing folder.
+# licenses/npm-packages.txt lists the packages. With it a test can find a missing folder.
 add_npm_licenses() {
     local package="$1" lock="$2" work key version url integrity name archive dir to
 
@@ -110,8 +117,11 @@ add_npm_licenses() {
     rm -rf "$work"
     mkdir -p "$work"
 
+    # The URL is "link" for a link to a local folder and "bundled" for a package inside another
+    # package. The integrity field can have more than one hash. Only the SHA-512 counts.
     /usr/bin/jq -r '.packages | to_entries[] | select(.key != "" and .value.dev != true and .value.devOptional != true)
-        | "\(.key) \(.value.version) \(.value.resolved) \(.value.integrity)"' "$lock" > "$work/packages.txt"
+        | "\(.key) \(.value.version) \(if .value.link then "link" elif .value.inBundle then "bundled" else .value.resolved end) \(.value.integrity // "" | split(" ") | map(select(startswith("sha512-"))) | .[0] // "none")"' \
+        "$lock" > "$work/packages.txt"
     [ -s "$work/packages.txt" ] || fail "$lock has no npm packages"
 
     log "Downloading the $(wc -l < "$work/packages.txt" | tr -d ' ') npm packages of $(basename "$lock") for their licenses"
@@ -122,6 +132,11 @@ add_npm_licenses() {
         dir="${archive%.tgz}"
         to="$package/licenses/npm-packages/$name@$version"
         echo "$name@$version" >> "$package/licenses/npm-packages.txt"
+
+        case "$url" in
+            link) fail "package-lock.json has the npm package $name as a link to a local folder. The build cannot check its license." ;;
+            bundled) fail "package-lock.json has the npm package $name $version inside another package. The build cannot check its license yet." ;;
+        esac
 
         case "$integrity" in
             sha512-*) ;;

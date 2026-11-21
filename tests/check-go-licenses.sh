@@ -14,8 +14,10 @@ binary="${2:?usage: tests/check-go-licenses.sh <package folder> <binary>}"
 grep -q "The Go Authors" "$root/licenses/go.txt" || { echo "error: the package has no license of Go" >&2; exit 1; }
 [ -s "$root/licenses/go-patents.txt" ] || { echo "error: the package has no PATENTS file of Go" >&2; exit 1; }
 
-# A line "=>" follows the line "dep" of a module that the build replaced with another module.
-modules="$(LC_ALL=C grep -a -o -E $'(dep|=>)\t[^\t]+\t[^\t]+' "$binary" | awk -F '\t' '
+# A line "=>" follows the line "dep" of a module that the build replaced with another module. Only
+# a line that starts with "dep" or "=>" and has a module version counts. So other data in the
+# binary does not look like a module.
+modules="$(LC_ALL=C grep -a -o -E $'^(dep|=>)\t[^\t]+\tv[0-9]+\\.[0-9]+\\.[0-9]+[^\t]*' "$binary" | awk -F '\t' '
     $1 == "dep" { if (line != "") print line; line = $2 "@" $3; next }
     $1 == "=>" { line = $2 "@" $3 }
     END { if (line != "") print line }

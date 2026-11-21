@@ -62,9 +62,33 @@ node_latest() {
     curl -fsS --max-time 30 https://nodejs.org/dist/index.json | jq -r --arg major "v$1." '[.[] | select(.version | startswith($major))][0].version' | sed 's/^v//'
 }
 
+# The newest fmt that cmake/libfmt.cmake of a MariaDB release names. products/mariadb.sh reads
+# the same version. The older version in that file is for an old GCC.
+mariadb_fmt() {
+    curl -fsS --max-time 30 "https://raw.githubusercontent.com/MariaDB/server/mariadb-$1/cmake/libfmt.cmake" |
+        grep -oE 'fmtlib/fmt/releases/download/[0-9.]+/' | cut -d/ -f5 | sort -V | tail -1
+}
+
 for line in 8.2 8.3 8.4 8.5; do report "php-$line" "$(endoflife_latest php "$line")"; done
 for line in 8.0 8.4 9.7; do report "mysql-$line" "$(endoflife_latest mysql "$line")"; done
-for line in 10.11 11.4 11.8 12.3; do report "mariadb-$line" "$(endoflife_latest mariadb "$line")"; done
+
+# The build of MariaDB stops when fmt in sources.lock is not the fmt of the MariaDB release. So
+# fmt gets the newest version that the newest release of a MariaDB line names, in the same update
+# as MariaDB. When one release could not be read, fmt is not updated.
+fmt_named=""
+for line in 10.11 11.4 11.8 12.3; do
+    newest="$(endoflife_latest mariadb "$line")"
+    report "mariadb-$line" "$newest"
+    named="$(mariadb_fmt "$newest")"
+
+    if [ -z "$named" ]; then
+        fmt_named="unknown"
+    elif [ "$fmt_named" != "unknown" ]; then
+        fmt_named="$fmt_named $named"
+    fi
+done
+[ "$fmt_named" != "unknown" ] || fmt_named=""
+report fmt "$(printf '%s\n' $fmt_named | sort -V | tail -1)"
 for line in 14 15 16 17 18 19; do report "postgresql-$line" "$(endoflife_latest postgresql "$line")"; done
 report redis-7.2 "$(endoflife_latest redis 7.2)"
 report redis-8.2 "$(endoflife_latest redis 8.2)"

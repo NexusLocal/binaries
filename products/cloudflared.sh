@@ -6,7 +6,8 @@
 # --strip-components do not fit. The release archive holds only the binary. So the license comes
 # from the source archive of the same tag. A NOTICE comes from there too when the source has one.
 # The version starts with the year, for example 2026.11.0. So the package has the one line 1.
-# The binary contains Go modules. Their licenses come from go.sum in the source archive.
+# The binary contains Go modules. The build downloads each module from proxy.golang.org for its
+# licenses. go.sum in the source archive gives the hash that each download must have.
 
 # Revision 2 adds the licenses of the Go modules in the binary.
 CLOUDFLARED_REVISION=2

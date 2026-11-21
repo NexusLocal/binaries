@@ -71,14 +71,18 @@ add_mariadb_licenses() {
 }
 
 # Without WITH_LIBFMT=system the build of MariaDB downloads fmt itself, outside sources.lock and
-# with only an MD5 check. So the build gets the fmt of sources.lock. It must be the version that
-# cmake/libfmt.cmake of MariaDB names.
+# with only an MD5 check. So the build gets the fmt of sources.lock. It must be the newest version
+# that cmake/libfmt.cmake of MariaDB names. The older version in that file is for an old GCC.
+# scripts/check-updates.sh reads the same version. So the daily update keeps fmt the same as the
+# fmt of MariaDB.
 unpack_fmt() {
-    local src="$1" version dir
+    local src="$1" version named dir
     version="$(source_version fmt)"
+    named="$(grep -oE 'fmtlib/fmt/releases/download/[0-9.]+/' "$src/cmake/libfmt.cmake" | cut -d/ -f5 | sort -V | tail -1)"
 
-    grep -q "fmt/releases/download/$version/fmt-$version.zip" "$src/cmake/libfmt.cmake" ||
-        fail "sources.lock has fmt $version, but cmake/libfmt.cmake of MariaDB names another version. Both need the same version."
+    [ -n "$named" ] || fail "cmake/libfmt.cmake of MariaDB names no version of fmt"
+    [ "$named" = "$version" ] ||
+        fail "sources.lock has fmt $version but cmake/libfmt.cmake of MariaDB names fmt $named. Both need the same version."
 
     dir="$(unpack fmt)"
     [ -f "$dir/fmt-$version/include/fmt/args.h" ] || fail "the archive of fmt $version has no fmt-$version/include/fmt/args.h"

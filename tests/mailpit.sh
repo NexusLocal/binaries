@@ -2,8 +2,8 @@
 #
 # Tests a Mailpit package in a folder with a space in its path, the same as
 # ~/Library/Application Support/Nexus. It checks the licenses of Mailpit, its Go modules and its
-# npm packages. It starts Mailpit with the arguments of Nexus, sends one mail with the sendmail
-# mode of Mailpit, and reads it back from the API with its tag:
+# npm packages. It starts Mailpit with the arguments of Nexus and sends one mail with the
+# sendmail mode of Mailpit. Then it reads the mail back from the API with its tag:
 #
 #   tests/mailpit.sh /tmp/nexus-build/out/mailpit-1.33.0-macos-arm64.tar.xz
 

@@ -59,8 +59,8 @@ ensure_autoconf() {
     build_gnu_tool autoconf
 }
 
-# No package is compiled with Go. The build uses Go only to read the modules in the official Go
-# binaries of Mailpit and cloudflared, and to download those modules for their licenses.
+# No package is compiled with Go. The build uses Go only for the official Go binaries of Mailpit
+# and cloudflared. Go reads the modules in each binary and downloads them for their licenses.
 ensure_go() {
     local version
     version="$(source_version go)"

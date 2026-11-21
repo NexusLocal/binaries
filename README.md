@@ -57,7 +57,8 @@ newest release in each version line, and `support.lock` to the newest end of sec
 checks each download against the checksum that upstream publishes. A source without such a
 checksum (PECL, MySQL, nginx, GNU and the tag archives of GitHub) is downloaded twice, and both
 downloads must be the same. A package with a source archive of its own (MySQL, Mailpit and
-cloudflared) gets both in one update. Then the workflow commits, pushes and starts the build. No person is
+cloudflared) gets both in one update. fmt gets the version that the newest MariaDB releases name
+in `cmake/libfmt.cmake`, in the same update as MariaDB. Then the workflow commits, pushes and starts the build. No person is
 needed for an update in a version line.
 
 The owner gets an issue, and so an email, in three cases:
@@ -73,8 +74,8 @@ The owner gets an issue, and so an email, in three cases:
 - **A clean environment.** `build.sh` starts again with an empty environment and the PATH
   `/usr/bin:/bin:/usr/sbin:/sbin`. Tools and libraries from MAMP, Homebrew or the PATH of the
   user cannot get into a package.
-- **Own build tools.** cmake, ninja and Go come from their official releases, and pkgconf is
-  built from source. All of them go in the build folder. Go compiles no package. It only gets
+- **Own build tools.** cmake, ninja and Go come from their official releases. pkgconf is built
+  from source. All of them go in the build folder. Go compiles no package. It only gets
   the licenses of the Go modules in the binaries of Mailpit and cloudflared.
 - **Pinned sources.** `sources.lock` gives the version, the SHA-256 and the URL of every source.
   The build stops when a download has a different SHA-256.
@@ -88,8 +89,8 @@ The owner gets an issue, and so an email, in three cases:
   and the license files of each Go module in it, in `licenses/go-modules/`. The build takes the
   modules from the build information of the binary. Each module must have the same hash as in
   `go.sum` of the source of the same tag. The Mailpit package also has the license files of the
-  npm packages of its web UI, in `licenses/npm-packages/`. They come from `package-lock.json` of
-  the source, and each download must have the SHA-512 of that file.
+  npm packages of its web UI, in `licenses/npm-packages/`. The build downloads the packages that
+  `package-lock.json` of the source names. Each download must have the SHA-512 of that file.
 
 ## Packages
 

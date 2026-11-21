@@ -6,8 +6,10 @@
 # fit. The package is a tar.xz, because a Nexus app of 0.1.1 cannot read another format in the
 # manifest.
 #
-# The binary contains Go modules and the JavaScript of the web UI from npm packages. Their
-# licenses come from go.sum and package-lock.json in the source archive of the same tag.
+# The binary contains Go modules and the JavaScript of the web UI from npm packages. The build
+# downloads each module and package for its licenses. So the build needs proxy.golang.org and
+# registry.npmjs.org. go.sum and package-lock.json in the source archive of the same tag give the
+# hash that each download must have.
 
 # Revision 2 adds the licenses of the Go modules and the npm packages in the binary.
 MAILPIT_REVISION=2
