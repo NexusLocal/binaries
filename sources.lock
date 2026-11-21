@@ -60,6 +60,7 @@ mariadb-10.11 10.11.20 ac5c003f725950a4cbf9829bd9b191b73f8ab0f2630d6dbc6292fc524
 mariadb-11.4 11.4.14 5295025835da449871518606f50c1134047df978e43939e4553737dd078e1261 https://archive.mariadb.org/mariadb-11.4.14/source/mariadb-11.4.14.tar.gz
 mariadb-11.8 11.8.10 77d62a86477d5b836da960f5228eb4e13458692ab775f2ad95d55fd4a4d3b117 https://archive.mariadb.org/mariadb-11.8.10/source/mariadb-11.8.10.tar.gz
 mariadb-12.3 12.3.4 75aae4d48df905734e24a85b955bbcdc43f4b122b450bc4ad2bc92f5d1ac578d https://archive.mariadb.org/mariadb-12.3.4/source/mariadb-12.3.4.tar.gz
+fmt 12.2.0 a2f4a8d51178f954e4c339007f77edd76ba0cb2e36f87a48e5a5403d9be5878f https://github.com/fmtlib/fmt/releases/download/12.2.0/fmt-12.2.0.zip
 postgresql-14 14.25 09af980eb3a5d0a8ad7a34b95031b1988bbcd430c87700a62d6234c0ed97ae4c https://ftp.postgresql.org/pub/source/v14.25/postgresql-14.25.tar.bz2
 postgresql-15 15.20 30e65cbbb771a39b553ed2df7e65622e65647aed55dbc19bd0fe853ff0a08442 https://ftp.postgresql.org/pub/source/v15.20/postgresql-15.20.tar.bz2
 postgresql-16 16.16 9d5cd8633043b75740d5d59749c6b7365e6aeb53c47098b1a5e80bb18f87881a https://ftp.postgresql.org/pub/source/v16.16/postgresql-16.16.tar.bz2

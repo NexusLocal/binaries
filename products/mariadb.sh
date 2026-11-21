@@ -7,6 +7,7 @@
 COMPILED_PREFIX=/var/empty/nexus/mariadb
 
 # Revision 2 adds the licenses of the libraries in the package and the THIRDPARTY file of MariaDB.
+# It also takes the header library fmt from sources.lock.
 MARIADB_REVISION=2
 
 # mariadb-install-db needs my_print_defaults and resolveip. The mysql* names are links to these
@@ -46,10 +47,10 @@ strip_local_symbols() {
 # THIRDPARTY lists the code from other projects in the source of MariaDB. InnoDB has code from
 # Google and Percona, and the HandlerSocket plugin and the sys schema have their own license
 # files. libmariadb is the client library with the LGPL. OpenSSL and PCRE2 are linked
-# statically. The build of MariaDB downloads the header library fmt itself. The bundled zlib and
-# readline are not built, because the package uses those of macOS.
+# statically. fmt is a header library in the server. The bundled zlib and readline are not
+# built, because the package uses those of macOS.
 add_mariadb_licenses() {
-    local package="$1" src="$2" pcre2
+    local package="$1" src="$2" fmt="$3" pcre2
     pcre2="$WORK_DIR/pcre2-$(source_version pcre2)"
 
     add_license "$package" mariadb "$src/COPYING"
@@ -66,7 +67,22 @@ add_mariadb_licenses() {
     add_license "$package" openssl "$WORK_DIR/openssl-$(source_version openssl)/LICENSE.txt"
     add_license "$package" pcre2 "$pcre2/LICENCE.md"
     add_license "$package" pcre2-sljit "$pcre2/deps/sljit/LICENSE"
-    add_license "$package" fmt "$src/nexus-build/extra/libfmt/src/libfmt/LICENSE"
+    add_license "$package" fmt "$fmt/LICENSE"
+}
+
+# Without WITH_LIBFMT=system the build of MariaDB downloads fmt itself, outside sources.lock and
+# with only an MD5 check. So the build gets the fmt of sources.lock. It must be the version that
+# cmake/libfmt.cmake of MariaDB names.
+unpack_fmt() {
+    local src="$1" version dir
+    version="$(source_version fmt)"
+
+    grep -q "fmt/releases/download/$version/fmt-$version.zip" "$src/cmake/libfmt.cmake" ||
+        fail "sources.lock has fmt $version, but cmake/libfmt.cmake of MariaDB names another version. Both need the same version."
+
+    dir="$(unpack fmt)"
+    [ -f "$dir/fmt-$version/include/fmt/args.h" ] || fail "the archive of fmt $version has no fmt-$version/include/fmt/args.h"
+    printf '%s\n' "$dir/fmt-$version"
 }
 
 mariadb_source() {
@@ -77,7 +93,7 @@ mariadb_source() {
 }
 
 build_product() {
-    local source_name version src install package
+    local source_name version src fmt install package
 
     source_name="$(mariadb_source "${1:-}")"
     version="$(source_version "$source_name")"
@@ -90,6 +106,7 @@ build_product() {
     build_autotools_dependency pcre2 --enable-jit
 
     src="$(unpack "$source_name")"
+    fmt="$(unpack_fmt "$src")"
     install="$WORK_DIR/mariadb-install-$version"
 
     log "Configuring MariaDB $version"
@@ -106,6 +123,8 @@ build_product() {
             -DWITH_SSL="$STAGE_DIR" \
             -DWITH_PCRE=system \
             -DWITH_ZLIB=system \
+            -DWITH_LIBFMT=system \
+            -DLIBFMT_INCLUDE_DIR="$fmt/include" \
             -DWITH_UNIT_TESTS=OFF \
             -DWITH_EMBEDDED_SERVER=OFF \
             -DWITH_WSREP=OFF \
@@ -145,8 +164,8 @@ build_product() {
     keep_only_listed_programs "$package/bin"
     strip_local_symbols "$package"
 
-    add_mariadb_licenses "$package" "$src"
-    write_source_file "$package" "$source_name" openssl pcre2
+    add_mariadb_licenses "$package" "$src" "$fmt"
+    write_source_file "$package" "$source_name" openssl pcre2 fmt
 
     PACKAGE_REVISION="$MARIADB_REVISION" archive_package mariadb "$version" "GPL-2.0-only"
 }
