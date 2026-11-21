@@ -147,6 +147,15 @@ if ($headers["subject"] !== "Hi" || $address !== "ann@example.test") {
 echo "  mailparse ", phpversion("mailparse"), "\n";
 '
 
+licenses="php openssl icu libintl oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype
+libyaml openldap libpq imagemagick igbinary redis xdebug pcov apcu yaml imagick mailparse"
+missing=""
+for name in $licenses; do
+    [ -s "$root/licenses/$name.txt" ] || missing="$missing $name"
+done
+[ -z "$missing" ] || { echo "error: licenses are missing:$missing" >&2; exit 1; }
+echo "==> the package has the license of each of its $(echo $licenses | wc -w | tr -d ' ') programs"
+
 echo "==> php-config gives paths inside the package"
 prefix="$("$root/bin/php-config" --prefix)"
 [ "$prefix" = "$root" ] || { echo "error: php-config --prefix gives $prefix" >&2; exit 1; }

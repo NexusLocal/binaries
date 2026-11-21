@@ -9,8 +9,44 @@ PHP_PREFIX=/var/empty/nexus/php
 PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml openldap postgresql-18 imagemagick"
 PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick mailparse"
 
-# Revision 2 adds mailparse to the PHP versions of revision 1.
-PHP_REVISION=2
+# Revision 2 added mailparse. Revision 3 adds the license of each program in the package.
+PHP_REVISION=3
+
+# The license files of the programs in the package besides PHP and igbinary. Each line gives the
+# name in licenses/, the source in sources.lock and the file in that source. The extensions,
+# OpenSSL, ICU, libintl, libpq and the static libraries are all in the package. So their licenses
+# go with it. FreeType offers two licenses. The package uses the FreeType License (FTL). The BDF
+# and PCF drivers of FreeType have their own license in their README.
+PHP_LICENSES="
+openssl openssl LICENSE.txt
+icu icu LICENSE
+libintl gettext gettext-runtime/intl/COPYING.LIB
+oniguruma oniguruma COPYING
+libsodium libsodium LICENSE
+libzip libzip LICENSE
+libpng libpng LICENSE
+libjpeg-turbo libjpeg-turbo LICENSE.md
+libjpeg-turbo-ijg libjpeg-turbo README.ijg
+libwebp libwebp COPYING
+freetype freetype LICENSE.TXT
+freetype-ftl freetype docs/FTL.TXT
+freetype-bdf freetype src/bdf/README
+freetype-pcf freetype src/pcf/README
+libyaml libyaml License
+openldap openldap LICENSE
+openldap-copyright openldap COPYRIGHT
+libpq postgresql-18 COPYRIGHT
+imagemagick imagemagick LICENSE
+imagemagick-notice imagemagick NOTICE
+redis pecl-redis LICENSE
+xdebug pecl-xdebug LICENSE
+pcov pecl-pcov LICENSE
+apcu pecl-apcu LICENSE
+apcu-notice pecl-apcu NOTICE
+yaml pecl-yaml LICENSE
+imagick pecl-imagick LICENSE
+mailparse pecl-mailparse LICENSE
+"
 
 # igbinary 3.2.16 is the newest stable release and does not compile against PHP 8.5, which
 # moved php_smart_string.h. Only the release candidate 3.2.17RC1 supports PHP 8.5.
@@ -21,6 +57,20 @@ igbinary_source() {
     fi
 
     echo pecl-igbinary
+}
+
+add_php_licenses() {
+    local package="$1" src="$2" minor="$3" name source_name file
+
+    add_license "$package" php "$src/LICENSE"
+
+    while read -r name source_name file; do
+        [ -n "$name" ] || continue
+        add_license "$package" "$name" "$WORK_DIR/$source_name-$(source_version "$source_name")/$file"
+    done <<< "$PHP_LICENSES"
+
+    source_name="$(igbinary_source "$minor")"
+    add_license "$package" igbinary "$WORK_DIR/$source_name-$(source_version "$source_name")/COPYING"
 }
 
 build_php_dependencies() {
@@ -187,7 +237,7 @@ build_product() {
     PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" pecl-imagick --with-imagick="$STAGE_DIR"
     build_pecl_extension "$package" pecl-mailparse
 
-    add_license "$package" php "$src/LICENSE"
+    add_php_licenses "$package" "$src" "$minor"
     write_source_file "$package" "$source_name" $PHP_LIBRARIES "$(igbinary_source "$minor")" \
         $(for name in $PHP_EXTENSIONS; do echo "pecl-$name"; done)
 
