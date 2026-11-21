@@ -84,4 +84,13 @@ echo "$headers" | grep -qi "^Content-Encoding: br" || { echo "$headers"; echo "e
 
 "$nginx" -p "$root/" -c conf/test.conf -e logs/error.log -s quit
 
+licenses="nginx openssl pcre2 pcre2-sljit zlib brotli ngx_brotli headers-more geoip2 libmaxminddb
+libmaxminddb-notice njs"
+missing=""
+for name in $licenses; do
+    [ -s "$root/licenses/$name.txt" ] || missing="$missing $name"
+done
+[ -z "$missing" ] || { echo "error: licenses are missing:$missing" >&2; exit 1; }
+echo "==> the package has all $(echo $licenses | wc -w | tr -d ' ') license files"
+
 echo "==> all nginx tests passed"

@@ -1,5 +1,9 @@
 NGINX_SOURCES="nginx openssl pcre2 zlib brotli ngx_brotli headers-more geoip2 libmaxminddb njs"
 
+# Revision 2 adds the NOTICE file of libmaxminddb and the license of sljit, the JIT compiler in
+# PCRE2.
+NGINX_REVISION=2
+
 build_libmaxminddb() {
     local dir
     dir="$(unpack libmaxminddb)"
@@ -120,14 +124,16 @@ build_product() {
     add_license "$package" nginx "$nginx/LICENSE"
     add_license "$package" openssl "$openssl/LICENSE.txt"
     add_license "$package" pcre2 "$pcre2/LICENCE.md"
+    add_license "$package" pcre2-sljit "$pcre2/deps/sljit/LICENSE"
     add_license "$package" zlib "$zlib/LICENSE"
     add_license "$package" brotli "$ngx_brotli/deps/brotli/LICENSE"
     add_license "$package" ngx_brotli "$ngx_brotli/LICENSE"
-    add_license "$package" headers-more "$headers_more/README.markdown"
+    add_license "$package" headers-more "$headers_more/LICENSE"
     add_license "$package" geoip2 "$geoip2/LICENSE"
     add_license "$package" libmaxminddb "$WORK_DIR/libmaxminddb-$(source_version libmaxminddb)/LICENSE"
+    add_license "$package" libmaxminddb-notice "$WORK_DIR/libmaxminddb-$(source_version libmaxminddb)/NOTICE"
     add_license "$package" njs "$njs/LICENSE"
     write_source_file "$package" $NGINX_SOURCES
 
-    archive_package nginx "$version" "BSD-2-Clause"
+    PACKAGE_REVISION="$NGINX_REVISION" archive_package nginx "$version" "BSD-2-Clause"
 }
