@@ -31,4 +31,17 @@ cli=("$root/bin/redis-cli" -p "$port")
 [ "$("${cli[@]}" -n 0 get nexus-test)" = "" ] || { echo "error: database 0 sees a key of database 42" >&2; exit 1; }
 [ "$("${cli[@]}" config get databases | tail -1)" = "64" ] || { echo "error: databases is not 64" >&2; exit 1; }
 
+licenses="redis hiredis linenoise lua hdr_histogram hdr_histogram-copying fpconv"
+case "$(basename "$root")" in
+    redis-7.2.*) ;;
+    redis-8.2.*) licenses="$licenses fast_float" ;;
+    *) licenses="$licenses fast_float xxhash tre" ;;
+esac
+missing=""
+for name in $licenses; do
+    [ -s "$root/licenses/$name.txt" ] || missing="$missing $name"
+done
+[ -z "$missing" ] || { echo "error: licenses are missing:$missing" >&2; exit 1; }
+echo "==> the package has all $(echo $licenses | wc -w | tr -d ' ') license files"
+
 echo "==> all Redis tests passed"

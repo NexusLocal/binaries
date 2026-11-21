@@ -16,6 +16,28 @@ add_license() {
     cp "$file" "$package/licenses/$name.txt"
 }
 
+# Some bundled libraries have their license only in a comment of a source file, for example
+# linenoise in Redis. This copies the first comment of the file that contains the text: a /* */
+# comment or a run of // lines.
+add_license_from_comment() {
+    local package="$1" name="$2" file="$3" text="$4"
+    [ -f "$file" ] || fail "license file not found for $name: $file"
+
+    awk -v text="$text" '
+        function check(comment) {
+            if (index(comment, text)) { printf "%s", comment; found = 1; exit }
+        }
+        inside { block = block $0 "\n"; if (/\*\//) { inside = 0; check(block) } next }
+        /^[[:space:]]*\/\// { lines = lines $0 "\n"; next }
+        lines != "" { check(lines); lines = "" }
+        /\/\*/ { block = $0 "\n"; if (/\*\//) check(block); else inside = 1 }
+        END {
+            if (!found && index(lines, text)) { printf "%s", lines; found = 1 }
+            exit found ? 0 : 1
+        }
+    ' "$file" > "$package/licenses/$name.txt" || fail "no license comment with \"$text\" for $name in $file"
+}
+
 write_source_file() {
     local package="$1" name
     shift
