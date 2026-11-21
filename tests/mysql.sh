@@ -80,4 +80,17 @@ if [ -n "${NEXUS_TEST_DUMP:-}" ]; then
     echo "    $("${sql[@]}" -N -e "select count(*) from information_schema.tables where table_schema = 'nexus_import'") tables restored"
 fi
 
+# The LICENSE of the Oracle build of MySQL also holds the licenses of the libraries in it.
+licenses="mysql"
+if [ -x "$root/bin/mariadbd" ]; then
+    licenses="mariadb mariadb-thirdparty innodb-google innodb-percona handlersocket libhsclient
+server-audit test-sql-service sys-schema sys-schema-copying libmariadb openssl pcre2 pcre2-sljit fmt"
+fi
+missing=""
+for name in $licenses; do
+    [ -s "$root/licenses/$name.txt" ] || missing="$missing $name"
+done
+[ -z "$missing" ] || { echo "error: licenses are missing:$missing" >&2; exit 1; }
+echo "==> the package has all $(echo $licenses | wc -w | tr -d ' ') license files"
+
 echo "==> all database tests passed"

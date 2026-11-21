@@ -6,6 +6,9 @@
 
 COMPILED_PREFIX=/var/empty/nexus/mariadb
 
+# Revision 2 adds the licenses of the libraries in the package and the THIRDPARTY file of MariaDB.
+MARIADB_REVISION=2
+
 # mariadb-install-db needs my_print_defaults and resolveip. The mysql* names are links to these
 # programs, so tools that call mysqldump keep working.
 MARIADB_PROGRAMS="mariadbd mariadb mariadb-dump mariadb-admin mariadb-check mariadb-import
@@ -38,6 +41,32 @@ strip_local_symbols() {
         chmod u+w "$path"
         strip -x "$path" 2> /dev/null || true
     done
+}
+
+# THIRDPARTY lists the code from other projects in the source of MariaDB. InnoDB has code from
+# Google and Percona, and the HandlerSocket plugin and the sys schema have their own license
+# files. libmariadb is the client library with the LGPL. OpenSSL and PCRE2 are linked
+# statically. The build of MariaDB downloads the header library fmt itself. The bundled zlib and
+# readline are not built, because the package uses those of macOS.
+add_mariadb_licenses() {
+    local package="$1" src="$2" pcre2
+    pcre2="$WORK_DIR/pcre2-$(source_version pcre2)"
+
+    add_license "$package" mariadb "$src/COPYING"
+    add_license "$package" mariadb-thirdparty "$src/THIRDPARTY"
+    add_license "$package" innodb-google "$src/storage/innobase/COPYING.Google"
+    add_license "$package" innodb-percona "$src/storage/innobase/COPYING.Percona"
+    add_license "$package" handlersocket "$src/plugin/handler_socket/handlersocket/COPYRIGHT.txt"
+    add_license "$package" libhsclient "$src/plugin/handler_socket/libhsclient/COPYRIGHT.txt"
+    add_license "$package" server-audit "$src/plugin/server_audit/COPYING"
+    add_license "$package" test-sql-service "$src/plugin/test_sql_service/COPYING"
+    add_license "$package" sys-schema "$src/scripts/sys_schema/LICENSE"
+    add_license "$package" sys-schema-copying "$src/scripts/sys_schema/COPYING"
+    add_license "$package" libmariadb "$src/libmariadb/COPYING.LIB"
+    add_license "$package" openssl "$WORK_DIR/openssl-$(source_version openssl)/LICENSE.txt"
+    add_license "$package" pcre2 "$pcre2/LICENCE.md"
+    add_license "$package" pcre2-sljit "$pcre2/deps/sljit/LICENSE"
+    add_license "$package" fmt "$src/nexus-build/extra/libfmt/src/libfmt/LICENSE"
 }
 
 mariadb_source() {
@@ -116,8 +145,8 @@ build_product() {
     keep_only_listed_programs "$package/bin"
     strip_local_symbols "$package"
 
-    add_license "$package" mariadb "$src/COPYING"
+    add_mariadb_licenses "$package" "$src"
     write_source_file "$package" "$source_name" openssl pcre2
 
-    archive_package mariadb "$version" "GPL-2.0-only"
+    PACKAGE_REVISION="$MARIADB_REVISION" archive_package mariadb "$version" "GPL-2.0-only"
 }
