@@ -148,13 +148,19 @@ echo "  mailparse ", phpversion("mailparse"), "\n";
 '
 
 licenses="php openssl icu libintl oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype
-libyaml openldap libpq imagemagick igbinary redis xdebug pcov apcu yaml imagick mailparse"
+libyaml openldap libpq imagemagick igbinary redis xdebug pcov apcu yaml imagick mailparse zend
+zend-asm tsrm php-fpm libbcmath timelib libmagic libmbfl libavifinfo pcre2 libgd xxhash dynasm"
+case "$(basename "$root")" in
+    php-8.2.*|php-8.3.*) ;;
+    php-8.4.*) licenses="$licenses opcache-jit-ir lexbor lexbor-notice" ;;
+    *) licenses="$licenses opcache-jit-ir lexbor lexbor-notice uriparser" ;;
+esac
 missing=""
 for name in $licenses; do
     [ -s "$root/licenses/$name.txt" ] || missing="$missing $name"
 done
 [ -z "$missing" ] || { echo "error: licenses are missing:$missing" >&2; exit 1; }
-echo "==> the package has the license of each of its $(echo $licenses | wc -w | tr -d ' ') programs"
+echo "==> the package has all $(echo $licenses | wc -w | tr -d ' ') license files"
 
 echo "==> php-config gives paths inside the package"
 prefix="$("$root/bin/php-config" --prefix)"

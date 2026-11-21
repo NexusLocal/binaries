@@ -9,8 +9,9 @@ PHP_PREFIX=/var/empty/nexus/php
 PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml openldap postgresql-18 imagemagick"
 PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick mailparse"
 
-# Revision 2 added mailparse. Revision 3 adds the license of each program in the package.
-PHP_REVISION=3
+# Revision 2 added mailparse. Revision 3 added the license of each program in the package.
+# Revision 4 adds the licenses of the libraries in the source of PHP.
+PHP_REVISION=4
 
 # The license files of the programs in the package besides PHP and igbinary. Each line gives the
 # name in licenses/, the source in sources.lock and the file in that source. The extensions,
@@ -71,6 +72,53 @@ add_php_licenses() {
 
     source_name="$(igbinary_source "$minor")"
     add_license "$package" igbinary "$WORK_DIR/$source_name-$(source_version "$source_name")/COPYING"
+
+    add_php_source_licenses "$package" "$src" "$minor"
+}
+
+# The libraries in the source of PHP that the package contains. PCRE2, libgd and xxHash have their
+# license only in a comment. DynASM, the assembler of the JIT, has it in a string in dynasm.lua.
+# libudis86 is only for the JIT on Intel, and oci8 is not built. So their licenses stay out.
+add_php_source_licenses() {
+    local package="$1" src="$2" minor="$3" ir="$2/ext/opcache/jit/ir" dynasm
+
+    add_license "$package" zend "$src/Zend/LICENSE"
+    add_license "$package" zend-asm "$src/Zend/asm/LICENSE"
+    add_license "$package" tsrm "$src/TSRM/LICENSE"
+    add_license "$package" php-fpm "$src/sapi/fpm/LICENSE"
+    add_license "$package" libbcmath "$src/ext/bcmath/libbcmath/LICENSE"
+    add_license "$package" timelib "$src/ext/date/lib/LICENSE.rst"
+    add_license "$package" libmagic "$src/ext/fileinfo/libmagic/LICENSE"
+    add_license "$package" libmbfl "$src/ext/mbstring/libmbfl/LICENSE"
+    add_license "$package" libavifinfo "$src/ext/standard/libavifinfo/LICENSE"
+    add_license_from_comment "$package" pcre2 "$src/ext/pcre/pcre2lib/pcre2.h" "Redistribution and use"
+    add_license_from_comment "$package" libgd "$src/ext/gd/libgd/gd.h" "Permission to use"
+    add_license_from_comment "$package" xxhash "$src/ext/hash/xxhash/xxhash.h" "Redistribution and use"
+
+    case "$minor" in
+        8.2|8.3)
+            dynasm="$src/ext/opcache/jit/dynasm/dynasm.lua"
+            ;;
+        8.4)
+            dynasm="$ir/dynasm/dynasm.lua"
+            add_license "$package" opcache-jit-ir "$ir/LICENSE"
+            add_license "$package" lexbor "$src/ext/dom/lexbor/LICENSE"
+            add_license "$package" lexbor-notice "$src/ext/dom/lexbor/NOTICE"
+            ;;
+        *)
+            dynasm="$ir/dynasm/dynasm.lua"
+            add_license "$package" opcache-jit-ir "$ir/LICENSE"
+            add_license "$package" lexbor "$src/ext/lexbor/LICENSE"
+            add_license "$package" lexbor-notice "$src/ext/lexbor/NOTICE"
+            add_license "$package" uriparser "$src/ext/uri/uriparser/COPYING.BSD-3-Clause"
+            ;;
+    esac
+
+    [ -f "$dynasm" ] || fail "license file not found for dynasm: $dynasm"
+    awk '/^  copyright =/ { inside = 1; next } inside && /^\]\]/ { exit } inside' "$dynasm" \
+        > "$package/licenses/dynasm.txt"
+    grep -q "Permission is hereby granted" "$package/licenses/dynasm.txt" \
+        || fail "no license text for DynASM in $dynasm"
 }
 
 build_php_dependencies() {
