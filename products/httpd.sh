@@ -5,6 +5,10 @@ COMPILED_PREFIX="$HTTPD_PREFIX"
 
 HTTPD_SOURCES="httpd apr apr-util pcre2 openssl nghttp2 brotli"
 
+# Revision 2 adds the NOTICE files of APR and APR-util and the license of sljit, the JIT compiler
+# in PCRE2.
+HTTPD_REVISION=2
+
 build_product() {
     local version src install package
 
@@ -68,12 +72,15 @@ build_product() {
     add_license "$package" httpd "$src/LICENSE"
     add_license "$package" httpd-notice "$src/NOTICE"
     add_license "$package" apr "$src/srclib/apr/LICENSE"
+    add_license "$package" apr-notice "$src/srclib/apr/NOTICE"
     add_license "$package" apr-util "$src/srclib/apr-util/LICENSE"
+    add_license "$package" apr-util-notice "$src/srclib/apr-util/NOTICE"
     add_license "$package" pcre2 "$WORK_DIR/pcre2-$(source_version pcre2)/LICENCE.md"
+    add_license "$package" pcre2-sljit "$WORK_DIR/pcre2-$(source_version pcre2)/deps/sljit/LICENSE"
     add_license "$package" openssl "$WORK_DIR/openssl-$(source_version openssl)/LICENSE.txt"
     add_license "$package" nghttp2 "$WORK_DIR/nghttp2-$(source_version nghttp2)/COPYING"
     add_license "$package" brotli "$WORK_DIR/brotli-$(source_version brotli)/LICENSE"
     write_source_file "$package" $HTTPD_SOURCES
 
-    archive_package httpd "$version" "Apache-2.0"
+    PACKAGE_REVISION="$HTTPD_REVISION" archive_package httpd "$version" "Apache-2.0"
 }

@@ -84,4 +84,13 @@ version="$(curl -sS -o /dev/null -w '%{http_version}' --http2-prior-knowledge "h
 
 "$httpd" -d "$root" -f conf/test.conf -k stop
 
+licenses="httpd httpd-notice apr apr-notice apr-util apr-util-notice pcre2 pcre2-sljit openssl
+nghttp2 brotli"
+missing=""
+for name in $licenses; do
+    [ -s "$root/licenses/$name.txt" ] || missing="$missing $name"
+done
+[ -z "$missing" ] || { echo "error: licenses are missing:$missing" >&2; exit 1; }
+echo "==> the package has all $(echo $licenses | wc -w | tr -d ' ') license files"
+
 echo "==> all httpd tests passed"
