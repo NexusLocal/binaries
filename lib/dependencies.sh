@@ -120,10 +120,11 @@ build_imagemagick() {
     mark_built imagemagick
 }
 
-# A static libpq for the pgsql and pdo_pgsql extensions of PHP, from the newest PostgreSQL. Only
-# the static library is built, so the check of the PostgreSQL build against a static OpenSSL in
-# the shared libpq does not apply. One combined libpq.a in its own folder holds libpq,
-# libpgcommon, libpgport and OpenSSL, so -lpq alone links everything.
+# A static libpq for the pgsql and pdo_pgsql extensions of PHP, from PostgreSQL 18. It also
+# connects to a PostgreSQL 19 server. Only the static library is built, so the check of the
+# PostgreSQL build against a static OpenSSL in the shared libpq does not apply. One combined
+# libpq.a in its own folder holds libpq, libpgcommon, libpgport and OpenSSL, so -lpq alone links
+# everything.
 LIBPQ_DIR="$STAGE_DIR/libpq"
 
 build_libpq() {

@@ -65,7 +65,7 @@ node_latest() {
 for line in 8.2 8.3 8.4 8.5; do report "php-$line" "$(endoflife_latest php "$line")"; done
 for line in 8.0 8.4 9.7; do report "mysql-$line" "$(endoflife_latest mysql "$line")"; done
 for line in 10.11 11.4 11.8 12.3; do report "mariadb-$line" "$(endoflife_latest mariadb "$line")"; done
-for line in 14 15 16 17 18; do report "postgresql-$line" "$(endoflife_latest postgresql "$line")"; done
+for line in 14 15 16 17 18 19; do report "postgresql-$line" "$(endoflife_latest postgresql "$line")"; done
 report redis-7.2 "$(endoflife_latest redis 7.2)"
 report redis-8.2 "$(endoflife_latest redis 8.2)"
 report redis-8 "$(github_latest redis/redis "")"
@@ -120,7 +120,7 @@ report_support() {
 for line in 8.2 8.3 8.4 8.5; do report_support php "$line" "$(endoflife_end php "$line")"; done
 for line in 8.0 8.4 9.7; do report_support mysql "$line" "$(endoflife_end mysql "$line")"; done
 for line in 10.11 11.4 11.8 12.3; do report_support mariadb "$line" "$(endoflife_end mariadb "$line")"; done
-for line in 14 15 16 17 18; do report_support postgresql "$line" "$(endoflife_end postgresql "$line")"; done
+for line in 14 15 16 17 18 19; do report_support postgresql "$line" "$(endoflife_end postgresql "$line")"; done
 report_support redis 7.2 "$(endoflife_end redis 7.2)"
 report_support redis 8.2 "$(endoflife_end redis 8.2)"
 report_support redis 8 "$(endoflife_end redis "$(pinned redis-8 | cut -d. -f1-2)")"

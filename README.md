@@ -97,7 +97,7 @@ The owner gets an issue, and so an email, in three cases:
 | cloudflared | 1 | The official darwin-arm64 binary of cloudflared, repackaged as tar.xz with its Apache-2.0 license. The build signs it again with an ad hoc signature. Nexus uses it for public links. The line 1 takes each release, because the version starts with the year. |
 | MySQL | 8.0, 8.4, 9.7 | The official Oracle builds for macOS on Apple silicon, repackaged: without the debug server, the test and MyISAM tools, the static libraries and the headers. Each release also carries the matching source archive. |
 | MariaDB | 10.11, 11.4, 11.8, 12.3 | Compiled, because MariaDB publishes no macOS builds. Without ColumnStore, RocksDB, Mroonga, Spider, CONNECT, OQGraph, S3, Galera and the compression providers. The package keeps the server and the client tools, with links under the mysql* names. Run `scripts/mariadb-install-db` from the package folder with `--basedir=.`, because the script breaks on a space in the path. |
-| PostgreSQL | 14, 15, 16, 17, 18 | With ICU, libxml2, uuid and all contrib modules (pgcrypto, uuid-ossp, citext, hstore, pg_stat_statements and more). OpenSSL and ICU are shared libraries in the package: libpq refuses a static OpenSSL. |
+| PostgreSQL | 14, 15, 16, 17, 18, 19 | With ICU, libxml2, uuid and all contrib modules (pgcrypto, uuid-ossp, citext, hstore, pg_stat_statements and more). OpenSSL and ICU are shared libraries in the package: libpq refuses a static OpenSSL. |
 
 ## PHP
 

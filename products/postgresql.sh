@@ -1,4 +1,4 @@
-# ./build.sh postgresql 14 | 15 | 16 | 17 | 18
+# ./build.sh postgresql 14 | 15 | 16 | 17 | 18 | 19
 #
 # PostgreSQL finds its share and lib folders relative to its own bin folder, so the package can
 # move as long as its layout stays the same. The contrib modules are included (pgcrypto,
@@ -9,8 +9,8 @@ COMPILED_PREFIX=/var/empty/nexus/postgresql
 
 postgresql_source() {
     case "$1" in
-        14|15|16|17|18) echo "postgresql-$1" ;;
-        *) fail "usage: ./build.sh postgresql <14|15|16|17|18>" ;;
+        14|15|16|17|18|19) echo "postgresql-$1" ;;
+        *) fail "usage: ./build.sh postgresql <14|15|16|17|18|19>" ;;
     esac
 }
 

@@ -45,6 +45,7 @@ jobs:
           - { name: postgresql-16, product: postgresql, version: "16" }
           - { name: postgresql-17, product: postgresql, version: "17" }
           - { name: postgresql-18, product: postgresql, version: "18" }
+          - { name: postgresql-19, product: postgresql, version: "19" }
           - { name: php-8.5, product: php, version: "8.5" }
           - { name: php-8.4, product: php, version: "8.4" }
           - { name: php-8.3, product: php, version: "8.3" }
