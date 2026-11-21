@@ -1,5 +1,6 @@
 cmake 4.5.1 e1fb288543e4eb2a410e385ecebc64323bda51f0205782f2b094ccd5d572ca2d https://github.com/Kitware/CMake/releases/download/v4.5.1/cmake-4.5.1-macos-universal.tar.gz
 ninja 1.13.2 c99048673aa765960a99cf10c6ddb9f1fad506099ff0a0e137ad8960a88f321b https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-mac.zip
+go 1.27.4 91a44a2b8a716600ad94a4f143e156116620db8828086a6e3602291be9bd0bb4 https://go.dev/dl/go1.27.4.darwin-arm64.tar.gz
 pkgconf 3.0.10 9371b2f6372da574d4c6dc96fe9b1463037bcf6afcb6671c1555afde7b17e2de https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.10.tar.xz
 openssl 3.5.9 603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz
 pcre2 10.49 53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384 https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.49/pcre2-10.49.tar.bz2
@@ -48,6 +49,7 @@ redis-7.2 7.2.17 07c679c013fd82513299733bddf91999bbbc830351ec9ea985a533b09a595d7
 redis-8.2 8.2.11 fba14b77c4bdcb2d5418b6741fc0cdaac4b78bc73eab9b2e5f3c255d597f16fa https://download.redis.io/releases/redis-8.2.11.tar.gz
 redis-8 8.10.3 edde778f6bdee7581e42fc139ca9e07e2822212092f7501f99989656e3629d02 https://download.redis.io/releases/redis-8.10.3.tar.gz
 mailpit 1.34.0 32933e0bd17e9738f19ab2eb5ec4d50e183448c9f29ba97e762d418a0f72e854 https://github.com/axllent/mailpit/releases/download/v1.34.0/mailpit-darwin-arm64.tar.gz
+mailpit-source 1.34.0 82e31ccc0069685f8794ea0d781cbf147f717633d3bd0f442883ab36ee6308c3 https://github.com/axllent/mailpit/archive/refs/tags/v1.34.0.tar.gz
 cloudflared 2026.11.1 02fe4bcf08f2c09699cff30658228a739a0c47fb75f3653d1b8772a27ade4462 https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-darwin-arm64.tgz
 cloudflared-source 2026.11.1 d72ba7465d392a7c82be85e9417c0c923aa69e7c6dbc9baaeb42bb49a8f0572d https://github.com/cloudflare/cloudflared/archive/refs/tags/2026.11.1.tar.gz
 mysql-8.0 8.0.46 6ca4a361a45f5019fbf6d500997986b4aaf6f0e30ff9c41179d1e8ecd635f3db https://cdn.mysql.com/Downloads/MySQL-8.0/mysql-8.0.46-macos15-arm64.tar.gz

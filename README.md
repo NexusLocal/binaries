@@ -56,8 +56,8 @@ The workflow Updates runs each day. `scripts/update-sources.sh` updates `sources
 newest release in each version line, and `support.lock` to the newest end of security fixes. It
 checks each download against the checksum that upstream publishes. A source without such a
 checksum (PECL, MySQL, nginx, GNU and the tag archives of GitHub) is downloaded twice, and both
-downloads must be the same. A package with a source archive of its own (MySQL and cloudflared)
-gets both in one update. Then the workflow commits, pushes and starts the build. No person is
+downloads must be the same. A package with a source archive of its own (MySQL, Mailpit and
+cloudflared) gets both in one update. Then the workflow commits, pushes and starts the build. No person is
 needed for an update in a version line.
 
 The owner gets an issue, and so an email, in three cases:
@@ -73,8 +73,9 @@ The owner gets an issue, and so an email, in three cases:
 - **A clean environment.** `build.sh` starts again with an empty environment and the PATH
   `/usr/bin:/bin:/usr/sbin:/sbin`. Tools and libraries from MAMP, Homebrew or the PATH of the
   user cannot get into a package.
-- **Own build tools.** cmake and ninja come from their official releases, and pkgconf is built
-  from source. All of them go in the build folder.
+- **Own build tools.** cmake, ninja and Go come from their official releases, and pkgconf is
+  built from source. All of them go in the build folder. Go compiles no package. It only gets
+  the licenses of the Go modules in the binaries of Mailpit and cloudflared.
 - **Pinned sources.** `sources.lock` gives the version, the SHA-256 and the URL of every source.
   The build stops when a download has a different SHA-256.
 - **Relocatable packages.** Every link to a library in the package becomes an `@rpath` link.
@@ -83,7 +84,12 @@ The owner gets an issue, and so an email, in three cases:
 - **A dependency check.** The build fails when a Mach-O file links a library outside the package
   and the system, or keeps an rpath into the build folder.
 - **Licenses.** Each package has a `licenses/` folder with the license of every program in it,
-  and a `SOURCE` file with the sources it was built from.
+  and a `SOURCE` file with the sources it was built from. A Go binary also has the license of Go
+  and the license files of each Go module in it, in `licenses/go-modules/`. The build takes the
+  modules from the build information of the binary. Each module must have the same hash as in
+  `go.sum` of the source of the same tag. The Mailpit package also has the license files of the
+  npm packages of its web UI, in `licenses/npm-packages/`. They come from `package-lock.json` of
+  the source, and each download must have the SHA-512 of that file.
 
 ## Packages
 
@@ -93,8 +99,8 @@ The owner gets an issue, and so an email, in three cases:
 | PHP | 8.2, 8.3, 8.4, 8.5 | CLI and FPM. See [PHP](#php). |
 | Apache httpd | 2.4 | All modules as shared modules, the event, worker and prefork MPMs, mod_ssl and mod_http2. APR and APR-util are shared libraries in the package. Not included: mod_lua, mod_md and the LDAP modules. |
 | Redis | 7.2, 8.2, newest 8 | redis-server, redis-cli and redis-benchmark, without TLS. 7.2 has the BSD license. Redis 8 is given out under the AGPLv3, one of its three licenses. 7.4 is not built, because its only licenses are RSALv2 and SSPLv1. |
-| Mailpit | 1 | The official darwin-arm64 binary of Mailpit, repackaged as tar.xz with its MIT license. Nexus uses it to catch the mail of the local sites. |
-| cloudflared | 1 | The official darwin-arm64 binary of cloudflared, repackaged as tar.xz with its Apache-2.0 license. The build signs it again with an ad hoc signature. Nexus uses it for public links. The line 1 takes each release, because the version starts with the year. |
+| Mailpit | 1 | The official darwin-arm64 binary of Mailpit, repackaged as tar.xz with its MIT license and the licenses of its Go modules and npm packages. Nexus uses it to catch the mail of the local sites. |
+| cloudflared | 1 | The official darwin-arm64 binary of cloudflared, repackaged as tar.xz with its Apache-2.0 license and the licenses of its Go modules. The build signs it again with an ad hoc signature. Nexus uses it for public links. The line 1 takes each release, because the version starts with the year. |
 | MySQL | 8.0, 8.4, 9.7 | The official Oracle builds for macOS on Apple silicon, repackaged: without the debug server, the test and MyISAM tools, the static libraries and the headers. Each release also carries the matching source archive. |
 | MariaDB | 10.11, 11.4, 11.8, 12.3 | Compiled, because MariaDB publishes no macOS builds. Without ColumnStore, RocksDB, Mroonga, Spider, CONNECT, OQGraph, S3, Galera and the compression providers. The package keeps the server and the client tools, with links under the mysql* names. Run `scripts/mariadb-install-db` from the package folder with `--basedir=.`, because the script breaks on a space in the path. |
 | PostgreSQL | 14, 15, 16, 17, 18, 19 | With ICU, libxml2, uuid and all contrib modules (pgcrypto, uuid-ossp, citext, hstore, pg_stat_statements and more). OpenSSL and ICU are shared libraries in the package: libpq refuses a static OpenSSL. |

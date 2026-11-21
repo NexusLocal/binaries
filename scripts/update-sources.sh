@@ -16,6 +16,7 @@
 #   - Redis: the redis-hashes repository
 #   - Composer: the .sha256sum file next to the phar
 #   - WordPress: the .sha1 file next to the archive
+#   - Go: the JSON of the downloads on go.dev
 #
 # A source without an upstream checksum (PECL, MySQL, nginx, GNU and the tag archives of GitHub)
 # is downloaded twice, and both downloads must give the same SHA-256.
@@ -75,6 +76,9 @@ upstream_checksum() {
             ;;
         https://downloads.wordpress.org/*)
             curl -fsS --max-time 60 "$url.sha1" | grep -oE '[0-9a-f]{40}' | head -1 | sed 's/^/sha1:/'
+            ;;
+        https://go.dev/dl/*)
+            curl -fsS --max-time 60 'https://go.dev/dl/?mode=json&include=all' | jq -r --arg file "$file" '.[].files[] | select(.filename == $file) | .sha256'
             ;;
     esac
 }
@@ -152,7 +156,8 @@ update_source() {
     result="$(checked_line "$name" "$current" "$newest")"
     [ -n "$result" ] || return
 
-    # A package with a source archive of its own (MySQL and cloudflared) gets both in one update.
+    # A package with a source archive of its own (MySQL, Mailpit and cloudflared) gets both in one
+    # update.
     # So the SOURCE file of the package always names the source of the same version. The source
     # line can have an older version than its package. So the new URL starts from its own version.
     source_current="$(awk -v name="$name-source" '$1 == name { print $2 }' "$lock")"

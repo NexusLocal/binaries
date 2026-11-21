@@ -59,6 +59,34 @@ ensure_autoconf() {
     build_gnu_tool autoconf
 }
 
+# No package is compiled with Go. The build uses Go only to read the modules in the official Go
+# binaries of Mailpit and cloudflared, and to download those modules for their licenses.
+ensure_go() {
+    local version
+    version="$(source_version go)"
+
+    if [ -f "$TOOLS_DIR/go/.version" ] && [ "$(cat "$TOOLS_DIR/go/.version")" = "$version" ]; then
+        return
+    fi
+
+    log "Installing Go $version into the build tools"
+
+    local dir
+    dir="$(unpack go)"
+    rm -rf "$TOOLS_DIR/go"
+    mv "$dir" "$TOOLS_DIR/go"
+    echo "$version" > "$TOOLS_DIR/go/.version"
+}
+
+# Go gets its module cache in the build folder. It downloads only from proxy.golang.org and
+# checks each module against the checksum database of Go.
+go_tool() {
+    env GOTOOLCHAIN=local GOENV=off GOFLAGS=-modcacherw \
+        GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org \
+        GOMODCACHE="$WORK_DIR/go/mod" GOPATH="$WORK_DIR/go/path" GOCACHE="$WORK_DIR/go/cache" \
+        "$TOOLS_DIR/go/bin/go" "$@"
+}
+
 ensure_pkgconf() {
     local version
     version="$(source_version pkgconf)"

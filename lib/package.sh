@@ -38,6 +38,112 @@ add_license_from_comment() {
     ' "$file" > "$package/licenses/$name.txt" || fail "no license comment with \"$text\" for $name in $file"
 }
 
+# Copies each license file of a Go module or an npm package to a folder of the package. A file in
+# a subfolder counts too, because it can be the license of code from another project. Test data
+# and nested node_modules do not count. Returns 1 when the module or package has no license file.
+copy_license_files() {
+    local from="$1" to="$2" files file
+
+    files="$(cd "$from" && find . -type f | sed 's|^\./||' | LC_ALL=C sort |
+        grep -i -E '(^|/)(licen[cs]e|copying|notice|patents|unlicense|third[-_]party[-_]licen[cs]es?)[^/]*$|(^|/)licen[cs]es/[^/]+$|\.licen[cs]e\.txt$' |
+        grep -v -E '(^|/)(testdata|node_modules)/')" || return 1
+
+    while IFS= read -r file; do
+        mkdir -p "$to/$(dirname "$file")"
+
+        case "$file" in
+            *.gz) gunzip -c "$from/$file" > "$to/${file%.gz}" ;;
+            *) cp "$from/$file" "$to/$file" ;;
+        esac
+    done <<< "$files"
+}
+
+# A Go binary lists the modules in it with the go.sum hash of each module. Each hash must be the
+# same as in go.sum of the source of the same tag. Go downloads each module and checks it against
+# the checksum database of Go, and the build checks it against go.sum. Then the license files of
+# each module go to licenses/go-modules/<module>@<version>/. The runtime of Go is in each Go
+# binary, so the license of Go goes in too. That text is the same in each version of Go.
+add_go_licenses() {
+    local package="$1" binary="$2" source="$3" work path version sum dir
+    work="$WORK_DIR/go-licenses-$(basename "$binary")"
+
+    ensure_go
+    rm -rf "$work"
+    mkdir -p "$work/empty"
+
+    # A line "=>" follows the line "dep" of a module that the build replaced with another module.
+    go_tool version -m "$binary" | awk '
+        $1 == "dep" { if (line != "") print line; line = $2 " " $3 " " $4; next }
+        $1 == "=>" { line = $2 " " $3 " " $4 }
+        END { if (line != "") print line }
+    ' > "$work/modules.txt"
+    [ -s "$work/modules.txt" ] || fail "$binary has no Go modules in its build information"
+
+    while read -r path version sum; do
+        grep -q -F -x "$path $version $sum" "$source/go.sum" || fail "the hash of $path $version in $binary is not in go.sum of the source"
+    done < "$work/modules.txt"
+
+    log "Downloading the $(wc -l < "$work/modules.txt" | tr -d ' ') Go modules of $(basename "$binary") for their licenses"
+    (cd "$work/empty" && go_tool mod download -json $(awk '{ print $1 "@" $2 }' "$work/modules.txt")) > "$work/download.json" ||
+        fail "Go could not download and check all modules of $binary: $(/usr/bin/jq -r 'select(.Error) | .Error' "$work/download.json" | head -3)"
+    /usr/bin/jq -r '"\(.Path) \(.Version) \(.Sum) \(.Dir)"' "$work/download.json" > "$work/downloaded.txt"
+
+    while read -r path version sum; do
+        dir="$(awk -v line="$path $version $sum" 'index($0, line " ") == 1 { print substr($0, length(line) + 2) }' "$work/downloaded.txt")"
+        [ -n "$dir" ] || fail "Go downloaded $path $version with another hash than go.sum of the source"
+        copy_license_files "$dir" "$package/licenses/go-modules/$path@$version" || fail "the Go module $path $version has no license file"
+    done < "$work/modules.txt"
+
+    add_license "$package" go "$TOOLS_DIR/go/LICENSE"
+    add_license "$package" go-patents "$TOOLS_DIR/go/PATENTS"
+}
+
+# package-lock.json gives each npm package with its SHA-512. Each package that is not only for
+# development is downloaded from that URL and checked against that hash. Then its license files
+# go to licenses/npm-packages/<package>@<version>/. Some packages have their license only at the
+# end of README.md. Then the README.md from the License heading to the end goes in.
+# licenses/npm-packages.txt lists the packages, so a test can find a missing folder.
+add_npm_licenses() {
+    local package="$1" lock="$2" work key version url integrity name archive dir to
+
+    work="$WORK_DIR/npm-licenses"
+    rm -rf "$work"
+    mkdir -p "$work"
+
+    /usr/bin/jq -r '.packages | to_entries[] | select(.key != "" and .value.dev != true and .value.devOptional != true)
+        | "\(.key) \(.value.version) \(.value.resolved) \(.value.integrity)"' "$lock" > "$work/packages.txt"
+    [ -s "$work/packages.txt" ] || fail "$lock has no npm packages"
+
+    log "Downloading the $(wc -l < "$work/packages.txt" | tr -d ' ') npm packages of $(basename "$lock") for their licenses"
+
+    while read -r key version url integrity; do
+        name="${key##*node_modules/}"
+        archive="$work/$(echo "$name" | tr / _)-$version.tgz"
+        dir="${archive%.tgz}"
+        to="$package/licenses/npm-packages/$name@$version"
+        echo "$name@$version" >> "$package/licenses/npm-packages.txt"
+
+        case "$integrity" in
+            sha512-*) ;;
+            *) fail "package-lock.json has no SHA-512 for the npm package $name $version" ;;
+        esac
+
+        curl -fsSL --retry 8 --retry-connrefused -o "$archive" "$url" || fail "the download of the npm package $name $version failed ($url)"
+        [ "sha512-$(shasum -a 512 "$archive" | cut -d' ' -f1 | xxd -r -p | base64)" = "$integrity" ] ||
+            fail "the SHA-512 of the npm package $name $version does not match package-lock.json"
+
+        mkdir -p "$dir"
+        tar -xzf "$archive" -C "$dir" --strip-components 1
+
+        copy_license_files "$dir" "$to" && continue
+
+        [ -f "$dir/README.md" ] || fail "the npm package $name $version has no license file and no README.md"
+        mkdir -p "$to"
+        awk 'tolower($0) ~ /^(#+ *)?licen[cs]e *$/ { found = 1 } found' "$dir/README.md" > "$to/README-license.md"
+        grep -q -i -E 'copyright|permission' "$to/README-license.md" || fail "the npm package $name $version has no license file and no license in README.md"
+    done < "$work/packages.txt"
+}
+
 write_source_file() {
     local package="$1" name
     shift

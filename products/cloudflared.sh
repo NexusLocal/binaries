@@ -6,6 +6,10 @@
 # --strip-components do not fit. The release archive holds only the binary. So the license comes
 # from the source archive of the same tag. A NOTICE comes from there too when the source has one.
 # The version starts with the year, for example 2026.11.0. So the package has the one line 1.
+# The binary contains Go modules. Their licenses come from go.sum in the source archive.
+
+# Revision 2 adds the licenses of the Go modules in the binary.
+CLOUDFLARED_REVISION=2
 
 build_product() {
     local version source_tag archive src source package
@@ -37,7 +41,8 @@ build_product() {
         add_license "$package" cloudflared-notice "$source/NOTICE"
     fi
 
+    add_go_licenses "$package" "$src/cloudflared" "$source"
     write_source_file "$package" cloudflared cloudflared-source
 
-    PACKAGE_LINE=1 archive_package cloudflared "$version" Apache-2.0
+    PACKAGE_LINE=1 PACKAGE_REVISION="$CLOUDFLARED_REVISION" archive_package cloudflared "$version" Apache-2.0
 }

@@ -1,8 +1,9 @@
 #!/bin/bash
 #
 # Tests a Mailpit package in a folder with a space in its path, the same as
-# ~/Library/Application Support/Nexus. It starts Mailpit with the arguments of Nexus, sends one
-# mail with the sendmail mode of Mailpit, and reads it back from the API with its tag:
+# ~/Library/Application Support/Nexus. It checks the licenses of Mailpit, its Go modules and its
+# npm packages. It starts Mailpit with the arguments of Nexus, sends one mail with the sendmail
+# mode of Mailpit, and reads it back from the API with its tag:
 #
 #   tests/mailpit.sh /tmp/nexus-build/out/mailpit-1.33.0-macos-arm64.tar.xz
 
@@ -19,6 +20,18 @@ mkdir -p "$base/Nexus Test"
 tar -xf "$archive" -C "$base/Nexus Test"
 root="$(ls -d "$base/Nexus Test"/mailpit-*)"
 mkdir -p "$root/data"
+
+grep -q "MIT License" "$root/licenses/mailpit.txt" || { echo "error: the package has no MIT license of Mailpit" >&2; exit 1; }
+"$(dirname "$0")/check-go-licenses.sh" "$root" "$root/bin/mailpit"
+
+npm_packages="$(cat "$root/licenses/npm-packages.txt" 2> /dev/null || true)"
+[ -n "$npm_packages" ] || { echo "error: the package has no list of the npm packages of the web UI" >&2; exit 1; }
+missing=""
+for npm_package in $npm_packages; do
+    [ -n "$(find "$root/licenses/npm-packages/$npm_package" -type f -size +0 2> /dev/null | head -1)" ] || missing="$missing $npm_package"
+done
+[ -z "$missing" ] || { echo "error: license files are missing for these npm packages:$missing" >&2; exit 1; }
+echo "==> the package has license files for all $(echo "$npm_packages" | wc -l | tr -d ' ') npm packages"
 
 echo "==> $("$root/bin/mailpit" version)"
 
