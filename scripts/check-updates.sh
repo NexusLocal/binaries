@@ -8,7 +8,7 @@
 # It changes nothing. scripts/update-sources.sh reads this list and updates sources.lock after a
 # check of each download against the checksum of upstream.
 #
-# Needs curl and jq.
+# Needs curl and jq. It uses GH_TOKEN for the GitHub API when it is set.
 
 set -uo pipefail
 
@@ -38,8 +38,20 @@ endoflife_latest() {
     curl -fsS --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '.[] | select(.cycle == $cycle) | .latest'
 }
 
+# Without a token, GitHub accepts 60 API requests an hour from one address. The runners of GitHub
+# Actions share their addresses. So a request can get "403 Forbidden" before the run made 60. The
+# token of the workflow has its own limit of 1,000 requests an hour.
+github_api() {
+    if [ -n "${GH_TOKEN:-}" ]; then
+        curl -fsS --max-time 30 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/$1"
+        return
+    fi
+
+    curl -fsS --max-time 30 "https://api.github.com/$1"
+}
+
 github_latest() {
-    curl -fsS --max-time 30 "https://api.github.com/repos/$1/releases/latest" | jq -r .tag_name | sed -E "s/^${2:-v}//"
+    github_api "repos/$1/releases/latest" | jq -r .tag_name | sed -E "s/^${2:-v}//"
 }
 
 pecl_latest() {

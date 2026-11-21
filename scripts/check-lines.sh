@@ -11,7 +11,7 @@
 # count only with a long-term support release, because their other releases come each quarter.
 # cloudflared has no report here. Its one line 1 takes each release, also in a new year.
 #
-# Needs curl and jq.
+# Needs curl and jq. It uses GH_TOKEN for the GitHub API when it is set.
 
 set -uo pipefail
 
@@ -50,11 +50,23 @@ report_cycles() {
     done | sort -u
 }
 
+# Without a token, GitHub accepts 60 API requests an hour from one address. The runners of GitHub
+# Actions share their addresses. So a request can get "403 Forbidden" before the run made 60. The
+# token of the workflow has its own limit of 1,000 requests an hour.
+github_api() {
+    if [ -n "${GH_TOKEN:-}" ]; then
+        curl -fsS --max-time 30 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/$1"
+        return
+    fi
+
+    curl -fsS --max-time 30 "https://api.github.com/$1"
+}
+
 # A GitHub release with a new major version, for a package with one line.
 report_major() {
     local repo="$1" name="$2" title="$3" prefix="${4:-v}" known latest
     known="$(newest_known "$name")"
-    latest="$(curl -fsS --max-time 30 "https://api.github.com/repos/$repo/releases/latest" | jq -r .tag_name | sed -E "s/^$prefix//")"
+    latest="$(github_api "repos/$repo/releases/latest" | jq -r .tag_name | sed -E "s/^$prefix//")"
 
     if [ -n "$latest" ] && [ "$latest" != "null" ] && [ "${latest%%.*}" -gt "${known%%.*}" ] 2>/dev/null; then
         echo "- $title ${latest%%.*}"
