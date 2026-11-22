@@ -52,6 +52,11 @@ whose build or publication failed keeps its package of the newest manifest. So o
 not hold back the updates of the other packages. An old run of Build that somebody starts again
 fails and publishes nothing when `main` has a newer commit that starts a Build.
 
+The workflow Build makes only the packages that changed after the last successful Build of `main`.
+`scripts/plan-build.sh` chooses them from `packages.json`. A change in `lib`, `licenses`, `build.sh`,
+the Build workflow or a tool of the build makes all packages. A person can start Build by hand with
+the choice `all`.
+
 ## Automatic updates
 
 The workflow Updates runs each day. `scripts/update-sources.sh` updates `sources.lock` to the

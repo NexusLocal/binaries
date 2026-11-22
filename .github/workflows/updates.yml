@@ -92,7 +92,7 @@ jobs:
             if [ -n "$(gh issue list --state all --search "in:title \"$title\"" --json number --jq '.[0].number')" ]; then
               continue
             fi
-            gh issue create --title "$title" --assignee "$OWNER" --body "$line is out. Nexus does not offer it yet. A new version line needs a choice: add it to sources.lock, support.lock, the build matrix, the lists of version lines in scripts/check-updates.sh and the decision record (D12)."
+            gh issue create --title "$title" --assignee "$OWNER" --body "$line is out. Nexus does not offer it yet. A new version line needs a choice: add it to sources.lock, support.lock, packages.json, the lists of version lines in scripts/check-updates.sh and the decision record (D12)."
           done
 
       - name: Close the old issue "Updates available"

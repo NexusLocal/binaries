@@ -2,12 +2,19 @@ name: Build
 
 on:
   workflow_dispatch:
+    inputs:
+      packages:
+        description: The packages to build
+        type: choice
+        options: [changed, all]
+        default: changed
   push:
     branches: [main]
     paths:
       - build.sh
       - lib/**
       - licenses/**
+      - packages.json
       - products/**
       - tests/**
       - sources.lock
@@ -21,36 +28,45 @@ permissions:
   contents: read
 
 jobs:
+  # The packages that changed after the last successful Build of main. A run that fails or that a
+  # newer push stops does not count. So the next run builds its changes too.
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      packages: ${{ steps.plan.outputs.packages }}
+      php: ${{ steps.plan.outputs.php }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Choose the packages
+        id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHOICE: ${{ inputs.packages }}
+        run: |
+          base="all"
+          if [ "$CHOICE" != "all" ]; then
+            base="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // "all"')"
+          fi
+          echo "base: $base"
+          scripts/plan-build.sh "$base" > "$RUNNER_TEMP/packages.json"
+          jq -r '.[].name' "$RUNNER_TEMP/packages.json"
+          echo "packages=$(jq -c . "$RUNNER_TEMP/packages.json")" >> "$GITHUB_OUTPUT"
+          echo "php=$(jq -c '[.[] | select(.product == "php") | .version]' "$RUNNER_TEMP/packages.json")" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: plan
+    if: ${{ needs.plan.outputs.packages != '[]' }}
     runs-on: xcode-27
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { name: nginx, product: nginx, version: "" }
-          - { name: httpd, product: httpd, version: "" }
-          - { name: redis-7.2, product: redis, version: "7.2" }
-          - { name: redis-8.2, product: redis, version: "8.2" }
-          - { name: redis-8, product: redis, version: "8" }
-          - { name: mailpit, product: mailpit, version: "" }
-          - { name: cloudflared, product: cloudflared, version: "" }
-          - { name: mysql-8.0, product: mysql, version: "8.0" }
-          - { name: mysql-8.4, product: mysql, version: "8.4" }
-          - { name: mysql-9.7, product: mysql, version: "9.7" }
-          - { name: mariadb-10.11, product: mariadb, version: "10.11" }
-          - { name: mariadb-11.4, product: mariadb, version: "11.4" }
-          - { name: mariadb-11.8, product: mariadb, version: "11.8" }
-          - { name: mariadb-12.3, product: mariadb, version: "12.3" }
-          - { name: postgresql-14, product: postgresql, version: "14" }
-          - { name: postgresql-15, product: postgresql, version: "15" }
-          - { name: postgresql-16, product: postgresql, version: "16" }
-          - { name: postgresql-17, product: postgresql, version: "17" }
-          - { name: postgresql-18, product: postgresql, version: "18" }
-          - { name: postgresql-19, product: postgresql, version: "19" }
-          - { name: php-8.5, product: php, version: "8.5" }
-          - { name: php-8.4, product: php, version: "8.4" }
-          - { name: php-8.3, product: php, version: "8.3" }
-          - { name: php-8.2, product: php, version: "8.2" }
+        include: ${{ fromJSON(needs.plan.outputs.packages) }}
     name: build (${{ matrix.name }})
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -81,13 +97,13 @@ jobs:
   # The release does not wait for this job. A problem of WP-CLI must not stop a security update
   # of PHP.
   wp-cli:
-    needs: build
-    if: ${{ !cancelled() }}
+    needs: [plan, build]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.php != '[]' }}
     runs-on: xcode-27
     strategy:
       fail-fast: false
       matrix:
-        php: ["8.5", "8.4", "8.3", "8.2"]
+        php: ${{ fromJSON(needs.plan.outputs.php) }}
     name: wp-cli (php-${{ matrix.php }})
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -100,11 +116,12 @@ jobs:
       - name: Test WP-CLI
         run: tests/wp-cli.sh dist/php-${{ matrix.php }}*-macos-arm64.tar.xz
 
-  # A package whose build or test failed has no artifact. scripts/publish.sh keeps its package of
-  # the newest manifest, so the other packages still get their update.
+  # A package whose build or test failed has no artifact. A package that is not in the plan has no
+  # artifact either. scripts/publish.sh keeps its package of the newest manifest. So the other
+  # packages still get their update. The manifest also gets the new Node.js, Composer and WP-CLI.
   release:
-    needs: build
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    needs: [plan, build]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -118,6 +135,7 @@ jobs:
           ref: main
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ needs.plan.outputs.packages != '[]' }}
         with:
           path: dist
           merge-multiple: true
@@ -131,7 +149,7 @@ jobs:
 
   # The owner gets an issue and an email when a build, a test or the publication fails on main.
   report:
-    needs: [build, release, wp-cli]
+    needs: [plan, build, release, wp-cli]
     if: ${{ failure() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:

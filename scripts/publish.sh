@@ -203,7 +203,7 @@ stop_old_build() {
         exit 1
     fi
 
-    if grep -qE '^(build\.sh|sources\.lock|\.github/workflows/build\.yml|(lib|licenses|products|tests)/.+)$' <<< "$changes"; then
+    if grep -qE '^(build\.sh|packages\.json|sources\.lock|\.github/workflows/build\.yml|(lib|licenses|products|tests)/.+)$' <<< "$changes"; then
         echo "error: main has a newer commit that starts a Build. This run of $commit publishes nothing." >&2
         exit 1
     fi
