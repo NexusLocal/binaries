@@ -47,7 +47,7 @@ apr-util 1.6.5 96de1dd6f6a0476d2d2e7964926d8c1ddc3bb0e210e1b1812d3ba5a454a392e2 
 nghttp2 1.71.0 c0f55121d88650e4b9227aec28cebaf664d2417ca60fe70be0f8d38829f52116 https://github.com/nghttp2/nghttp2/releases/download/v1.71.0/nghttp2-1.71.0.tar.xz
 redis-7.2 7.2.17 07c679c013fd82513299733bddf91999bbbc830351ec9ea985a533b09a595d76 https://download.redis.io/releases/redis-7.2.17.tar.gz
 redis-8.2 8.2.11 fba14b77c4bdcb2d5418b6741fc0cdaac4b78bc73eab9b2e5f3c255d597f16fa https://download.redis.io/releases/redis-8.2.11.tar.gz
-redis-8 8.10.3 edde778f6bdee7581e42fc139ca9e07e2822212092f7501f99989656e3629d02 https://download.redis.io/releases/redis-8.10.3.tar.gz
+redis-8 8.12.0 b0100a879b2d45dc97d8fda941127609d648f8913008db1b65a2f72a8ae36c8b https://download.redis.io/releases/redis-8.12.0.tar.gz
 mailpit 1.34.0 32933e0bd17e9738f19ab2eb5ec4d50e183448c9f29ba97e762d418a0f72e854 https://github.com/axllent/mailpit/releases/download/v1.34.0/mailpit-darwin-arm64.tar.gz
 mailpit-source 1.34.0 82e31ccc0069685f8794ea0d781cbf147f717633d3bd0f442883ab36ee6308c3 https://github.com/axllent/mailpit/archive/refs/tags/v1.34.0.tar.gz
 cloudflared 2026.11.1 02fe4bcf08f2c09699cff30658228a739a0c47fb75f3653d1b8772a27ade4462 https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-darwin-arm64.tgz
