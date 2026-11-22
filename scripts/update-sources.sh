@@ -17,9 +17,10 @@
 #   - Composer: the .sha256sum file next to the phar
 #   - WordPress: the .sha1 file next to the archive
 #   - Go: the JSON of the downloads on go.dev
+#   - PostGIS: the .md5 file next to the archive, and the SHA-256 of two downloads
 #
 # Some sources have no upstream checksum: PECL, MySQL, nginx, GNU, FreeType, libpng, libwebp,
-# OpenLDAP, pkgconf and the archives of GitHub tags and commits. Such a source is downloaded twice.
+# OpenLDAP, pkgconf, GEOS and the archives of GitHub tags and commits. Such a source is downloaded twice.
 # Both downloads must give the same SHA-256.
 #
 # A package with a source archive of its own (<name>-source) gets both in one update.
@@ -47,7 +48,7 @@ fetch() {
 }
 
 # The SHA-256 that upstream publishes for a file, or nothing. A WordPress archive gets its SHA-1
-# with the prefix sha1:.
+# with the prefix sha1:, and a PostGIS archive gets its MD5 with the prefix md5:.
 upstream_checksum() {
     local url="$1" version="$2" file="${1##*/}" repo tag
 
@@ -77,6 +78,9 @@ upstream_checksum() {
             ;;
         https://downloads.wordpress.org/*)
             curl -fsS --max-time 60 "$url.sha1" | grep -oE '[0-9a-f]{40}' | head -1 | sed 's/^/sha1:/'
+            ;;
+        https://download.osgeo.org/postgis/*)
+            curl -fsS --max-time 60 "$url.md5" | grep -oE '[0-9a-f]{32}' | head -1 | sed 's/^/md5:/'
             ;;
         https://go.dev/dl/*)
             curl -fsS --max-time 60 'https://go.dev/dl/?mode=json&include=all' | jq -r --arg file "$file" '.[].files[] | select(.filename == $file) | .sha256'
@@ -122,6 +126,18 @@ checked_line() {
                 return
             fi
             method="the SHA-1 of upstream"
+            ;;
+        md5:*)
+            if [ "$(openssl dgst -md5 "$file" | awk '{ print $NF }')" != "${expected#md5:}" ]; then
+                echo "- failed: $name $newest. The MD5 is not the MD5 of upstream." >> "$summary"
+                return
+            fi
+
+            if ! fetch "$new_url" "$file.second" || [ "$(shasum -a 256 "$file.second" | cut -d' ' -f1)" != "$sha256" ]; then
+                echo "- failed: $name $newest. Two downloads gave a different file." >> "$summary"
+                return
+            fi
+            method="the MD5 of upstream, two downloads were the same"
             ;;
         "")
             if ! fetch "$new_url" "$file.second" || [ "$(shasum -a 256 "$file.second" | cut -d' ' -f1)" != "$sha256" ]; then

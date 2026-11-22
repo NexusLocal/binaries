@@ -16,14 +16,15 @@ postgresql_revision() {
     esac
 }
 
-# The libraries of PostGIS that the package has as shared libraries: GEOS and GMP have the LGPL
-# license, and more than one file uses GEOS and PROJ.
+# The libraries of PostGIS that the package has as shared libraries. GEOS and GMP have the LGPL
+# license. More than one file uses GEOS and PROJ.
 POSTGIS_SHARED_LIBRARIES="geos geos_c proj gmp"
 POSTGIS_LIBRARIES="geos proj gmp json-c protobuf-c"
 
 # The license files of PostGIS, pgRouting and their libraries. Each line gives the name in licenses/,
 # the source in sources.lock and the file in that source. The text of the LGPL 3 of GMP adds to the
-# text of the GPL 3. PostGIS has ryu, uthash, FlatBuffers and wagyu in its source.
+# text of the GPL 3. PostGIS has ryu, uthash, FlatBuffers, wagyu, Geobuf and the Mapbox vector tiles in
+# its source. The license of the whole package is GPL 3, because FlatBuffers and OpenSSL have Apache-2.0.
 POSTGIS_LICENSES="
 postgis postgis COPYING
 postgis-notice postgis LICENSE.TXT
@@ -34,6 +35,8 @@ postgis-uthash postgis deps/uthash/LICENSE
 postgis-flatbuffers postgis deps/flatgeobuf/include/flatbuffers/LICENSE
 postgis-wagyu postgis deps/wagyu/LICENSE.wagyu
 postgis-wagyu-geometry postgis deps/wagyu/LICENSE.geometry
+postgis-geobuf postgis postgis/geobuf.LICENSE
+postgis-vector-tile postgis postgis/vector_tile.LICENSE
 pgrouting pgrouting LICENSE
 pgrouting-boost pgrouting BOOST_LICENSE_1_0.txt
 boost boost LICENSE_1_0.txt
@@ -163,13 +166,14 @@ add_postgis_licenses() {
         add_license "$package" "$name" "$WORK_DIR/$source_name-$(source_version "$source_name")/$file"
     done <<< "$POSTGIS_LICENSES"
 
-    for name in "postgis liblwgeom postgis topology libpgcommon loader deps" "geos src include capi" "proj src include"; do
+    for name in "postgis liblwgeom postgis topology libpgcommon loader deps" "geos src include capi" "proj src include" "json-c ."; do
         set -- $name
         source_name="$1"
         shift
         (
             cd "$WORK_DIR/$source_name-$(source_version "$source_name")"
-            find "$@" -type f \( -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' \)
+            find "$@" -type f \( -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' \) \
+                -not -path '*/tests/*' -not -path '*/test/*' -not -path '*/fuzz/*' -not -path '*/bench/*'
         ) | add_source_notices "$package" "$source_name-source-notices" "$WORK_DIR/$source_name-$(source_version "$source_name")"
     done
 }
@@ -239,7 +243,7 @@ build_product() {
         done
         add_license "$package" pgvector "$WORK_DIR/pgvector-$(source_version pgvector)/LICENSE"
         add_postgis_licenses "$package"
-        license="PostgreSQL AND GPL-2.0-or-later"
+        license="PostgreSQL AND GPL-3.0-or-later"
         write_source_file "$package" "$source_name" openssl icu $extensions $POSTGIS_LIBRARIES boost
     else
         write_source_file "$package" "$source_name" openssl icu

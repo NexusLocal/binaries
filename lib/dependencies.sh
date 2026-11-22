@@ -253,15 +253,16 @@ build_geos() {
     build_shared_cmake_dependency geos -DBUILD_TESTING=OFF -DBUILD_GEOSOP=OFF -DGEOS_BUILD_DEVELOPER=OFF
 }
 
-# PROJ has its database in the library. So it works in each folder, and no setting of the user can
-# give it another database. Without TIFF it cannot use grid files.
+# PROJ has its database in the library. So it works in each folder. No setting of the user can give
+# it another database. Without TIFF it cannot use grid files.
 build_proj() {
     build_shared_cmake_dependency proj -DENABLE_TIFF=OFF -DENABLE_CURL=OFF -DBUILD_APPS=OFF -DBUILD_TESTING=OFF \
         -DEMBED_RESOURCE_FILES=ON -DUSE_ONLY_EMBEDDED_RESOURCE_FILES=ON -DEMBED_PROJ_DATA_PATH=OFF
 }
 
-# protobuf-c makes protoc-c, which only PostGIS needs at build time. It needs the C++ library of
-# protobuf. Version 21 is the last one without Abseil. Both stay in the tools folder.
+# PostGIS links the library of protobuf-c and uses its program protoc-c at build time. Both go to the
+# stage folder. protobuf-c needs the C++ library of protobuf at build time. That library stays in the
+# tools folder. Version 21 of protobuf is the last one without Abseil.
 build_protobuf_c() {
     dependency_built protobuf-c && return 0
     log "Building protobuf $(source_version protobuf) and protobuf-c $(source_version protobuf-c)"

@@ -92,6 +92,8 @@ report_library postgis PostGIS 2 "$(listed_latest https://download.osgeo.org/pos
 report_library pgrouting pgRouting 2 "$(github_latest pgRouting/pgrouting)"
 report_library geos GEOS 1 "$(listed_latest https://download.osgeo.org/geos/ geos)"
 report_library proj PROJ 1 "$(github_latest OSGeo/PROJ "")"
+report_library json-c json-c 1 "$(json_c_latest | tail -1)"
+report_library protobuf-c protobuf-c 2 "$(github_latest protobuf-c/protobuf-c)"
 report_library apr APR 2 "$(listed_latest https://archive.apache.org/dist/apr/ apr)"
 report_library apr-util APR-util 2 "$(listed_latest https://archive.apache.org/dist/apr/ apr-util)"
 report_library headers-more headers-more 1 "$(github_latest_tag openresty/headers-more-nginx-module)"

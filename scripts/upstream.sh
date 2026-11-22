@@ -45,9 +45,18 @@ github_line_tag() {
     github_api "repos/$1/git/matching-refs/tags/$2" | jq -r '.[].ref' | sed -nE "s#^refs/tags/${3-v}([0-9]+(\.[0-9]+)+)\$#\1#p" | sort -V | tail -1
 }
 
-# The newest version in the list of files of a download folder. With a line such as 2.6, only the
-# versions of that line count.
+# json-c has tags such as json-c-0.19-20260627 and json-c-0.13.1-20180305. This gives the versions in
+# their order.
+json_c_latest() {
+    github_api 'repos/json-c/json-c/tags?per_page=100' | jq -r '.[].name' | sed -nE 's/^json-c-([0-9]+(\.[0-9]+)+-[0-9]{8})$/\1/p' | sort -V
+}
+
+# The newest version in the list of files of a download folder. A file counts only with the suffix of
+# the pinned file, for example tar.xz. With a line such as 2.6, only the versions of that line count.
 listed_latest() {
-    curl -fsSL --max-time 30 "$1" | grep -oE "$2-[0-9]+(\.[0-9]+)+\.(tar\.(xz|bz2|gz)|tgz)" | sed -E "s/^$2-//; s/\.(tar\.(xz|bz2|gz)|tgz)$//" |
+    local suffix
+    suffix="$(awk -v name="$2" '$1 == name { print $4 }' "$root/sources.lock" | grep -oE '(tar\.[a-z0-9]+|tgz)$')"
+
+    curl -fsSL --max-time 30 "$1" | grep -oE "$2-[0-9]+(\.[0-9]+)+\.$suffix" | sed -E "s/^$2-//; s/\.$suffix$//" |
         awk -v line="${3:-}" 'line == "" || index($0, line ".") == 1' | sort -V | tail -1
 }

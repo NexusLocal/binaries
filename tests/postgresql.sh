@@ -45,8 +45,9 @@ case "$(basename "$root")" in
     *)
         extensions="vector postgis postgis_topology pgrouting"
         licenses="$licenses pgvector postgis postgis-notice postgis-ryu postgis-ryu-apache postgis-ryu-boost
-        postgis-uthash postgis-flatbuffers postgis-wagyu postgis-wagyu-geometry postgis-source-notices pgrouting
-        pgrouting-boost boost geos geos-source-notices proj proj-source-notices gmp gmp-gpl json-c protobuf-c"
+        postgis-uthash postgis-flatbuffers postgis-wagyu postgis-wagyu-geometry postgis-geobuf postgis-vector-tile
+        postgis-source-notices pgrouting pgrouting-boost boost geos geos-source-notices proj proj-source-notices
+        gmp gmp-gpl json-c json-c-source-notices protobuf-c"
         ;;
 esac
 
@@ -86,6 +87,19 @@ test_spatial() {
 
     [ "$("${psql[@]}" -At -d "$database" -c "select string_agg(node::text, ',' order by seq) from pgr_dijkstra('select id, source, target, cost from roads', 1, 4)")" = "1,2,4" ] \
         || { echo "error: pgRouting did not find the shortest route in $database" >&2; exit 1; }
+
+    [ "$("${psql[@]}" -At -d "$database" -c "select topology.topogeo_addpoint('net', st_setsrid(st_point(1, 1), 4326)) > 0")" = "t" ] \
+        || { echo "error: the topology does not work in $database" >&2; exit 1; }
+}
+
+# The programs of PostGIS must run from a folder with a space in its path.
+test_spatial_programs() {
+    "$root/bin/pgsql2shp" -f "$base/towns.shp" -h 127.0.0.1 -p "$port" -u postgres nexus_test towns > "$base/pgsql2shp.log" 2>&1 \
+        || { cat "$base/pgsql2shp.log"; echo "error: pgsql2shp failed" >&2; exit 1; }
+    [ "$("$root/bin/shp2pgsql" -s 4326 "$base/towns.shp" towns_copy 2> /dev/null | grep -c "INSERT INTO")" = "2" ] \
+        || { echo "error: shp2pgsql did not read the file" >&2; exit 1; }
+    output="$("$root/bin/pgtopo_export" --help 2>&1 < /dev/null || true)"
+    grep -qi usage <<< "$output" || { echo "error: pgtopo_export does not run: $output" >&2; exit 1; }
 }
 
 if [ -n "$extensions" ]; then
@@ -93,9 +107,11 @@ if [ -n "$extensions" ]; then
     create table towns (name text, place geometry(Point, 4326));
     insert into towns values ('Amersfoort', st_setsrid(st_point(5.38720621, 52.15517440), 4326)), ('Amsterdam', st_setsrid(st_point(4.9, 52.37), 4326));
     create index towns_place on towns using gist (place);
+    select topology.createtopology('net', 4326);
     create table roads (id int, source int, target int, cost float);
     insert into roads values (1, 1, 2, 1), (2, 2, 4, 1), (3, 1, 3, 1), (4, 3, 4, 5);"
     test_spatial nexus_test
+    test_spatial_programs
     echo "==> $("${psql[@]}" -At -d nexus_test -c "select 'PostGIS ' || postgis_lib_version() || ' and pgRouting ' || pgr_version()") work"
 
     "${psql[@]}" -d nexus_test -c "create extension vector;
