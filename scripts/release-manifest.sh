@@ -7,6 +7,8 @@
 #   scripts/release-manifest.sh download <folder>   puts the newest manifest.json in the folder
 #   scripts/release-manifest.sh publish <file>      publishes the file as the newest manifest
 #
+# The exit code of download is 3 when no release has a manifest.
+#
 # Needs gh.
 
 set -euo pipefail
@@ -28,7 +30,7 @@ download)
     tag="$(newest_manifest_tag)"
     if [ -z "$tag" ]; then
         echo "error: no release has a manifest" >&2
-        exit 1
+        exit 3
     fi
     gh release download "$tag" --repo "$repo" --pattern manifest.json --dir "$path" --clobber
     ;;

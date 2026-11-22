@@ -40,8 +40,7 @@ download_verified() {
     echo "$sha256  $target" | shasum -a 256 -c --status || { echo "error: SHA-256 mismatch for $url" >&2; exit 1; }
 }
 
-# The revisions of the tags of <name>-<version>, the highest first.
-tag_revisions() {
+tag_revisions_highest_first() {
     gh api --paginate "repos/$repo/git/matching-refs/tags/$1-r" --jq '.[].ref' |
         sed -nE "s|^refs/tags/$1-r([0-9]+)\$|\1|p" | sort -rn
 }
@@ -128,7 +127,7 @@ publish_package() {
     local json="$1" base version revisions newest released identity released_identity revision recipe
     base="$(basename "$json" .json)"
     version="$(jq -r '.name + "-" + .version' "$json")"
-    revisions="$(tag_revisions "$version")"
+    revisions="$(tag_revisions_highest_first "$version")"
     newest="$(newest_released "$version" $revisions)"
 
     if [ -n "$newest" ]; then
@@ -187,15 +186,20 @@ fi
 
 # Somebody can start an old run of the Build workflow again. Its packages are older than the
 # packages of a newer commit. So it publishes nothing when main has a newer commit that starts a
-# Build. These are the paths in build.yml.
+# Build. These are the paths in build.yml. The run fails, because the Build of the newer commit can
+# be missing too. Then the owner gets an issue.
 stop_old_build() {
     local commit changes
     commit="${GITHUB_SHA:-$(git -C "$root" rev-parse HEAD)}"
-    changes="$(gh api "repos/$repo/compare/$commit...main" --jq '.files[].filename')"
+
+    if ! changes="$(gh api "repos/$repo/compare/$commit...main" --jq '.files[] | .filename, (.previous_filename // empty)')"; then
+        echo "error: GitHub could not compare $commit with main, so nothing is published" >&2
+        exit 1
+    fi
 
     if grep -qE '^(build\.sh|sources\.lock|\.github/workflows/build\.yml|(lib|products|tests)/.+)$' <<< "$changes"; then
-        echo "::warning::main has a newer commit that starts a Build. This run of $commit publishes nothing."
-        exit 0
+        echo "error: main has a newer commit that starts a Build, so this run of $commit publishes nothing" >&2
+        exit 1
     fi
 }
 
@@ -230,17 +234,19 @@ add_upstream_entry wp-cli wp-cli 2 phar
 # problem of one package does not hold back the updates of the others. Only a line of
 # support.lock stays, so a line that Nexus no longer offers goes away.
 keep_previous_entries() {
-    local previous="$work/previous"
+    local previous="$work/previous" status=0
     mkdir -p "$previous"
 
-    if ! "$root/scripts/release-manifest.sh" download "$previous" > /dev/null; then
-        if [ -n "$failed" ]; then
-            echo "error: no earlier manifest for the packages that were not published:$failed" >&2
-            exit 1
-        fi
+    "$root/scripts/release-manifest.sh" download "$previous" > /dev/null || status=$?
 
+    if [ "$status" -eq 3 ]; then
         echo "==> no earlier manifest, so no package is kept"
         return
+    fi
+
+    if [ "$status" -ne 0 ]; then
+        echo "error: the newest manifest could not be read, so no manifest is published" >&2
+        exit 1
     fi
 
     jq -c '.packages[]' "$previous/manifest.json" | while read -r entry; do

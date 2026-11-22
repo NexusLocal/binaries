@@ -67,7 +67,7 @@ The owner gets an issue, and so an email, in three cases:
 
 - **Automatic update failed:** a download or a checksum failed, or a package has a new major
   version.
-- **Build failed:** a build or a test failed on `main`.
+- **Build failed:** a build, a test or a publication failed on `main`.
 - **New version line:** `scripts/check-lines.sh` found a new line upstream, for example PHP 8.6
   or Node.js 27. A new line needs a choice of the owner, so the workflow adds nothing.
 
