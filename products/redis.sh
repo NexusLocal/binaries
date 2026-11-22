@@ -4,8 +4,9 @@
 # choose from, and Nexus gives it out under the AGPLv3 with a link to the source. Redis 7.4 is not
 # built: its only licenses are RSALv2 and SSPLv1.
 
-# Revision 2 adds the licenses of the libraries that Redis builds into its programs.
-REDIS_REVISION=2
+# Revision 2 adds the licenses of the libraries that Redis builds into its programs. Revision 3 adds
+# the notices in the source files and REDISCONTRIBUTIONS.txt.
+REDIS_REVISION=3
 
 # The libraries in deps/ that the Makefile of Redis builds, and fast_float in src/ of the newest
 # Redis 8. jemalloc is not built, because the build uses MALLOC=libc. linenoise and fast_float
@@ -36,6 +37,45 @@ add_redis_licenses() {
     if grep -q 'fast_float_strtod\.o' "$src/src/Makefile"; then
         add_license_from_comment "$package" fast_float "$src/src/fast_float_strtod.c" "MIT License"
     fi
+
+    # Some code in Redis 8 keeps the BSD license. Its files name REDISCONTRIBUTIONS.txt.
+    if [ -f "$src/REDISCONTRIBUTIONS.txt" ]; then
+        add_license "$package" redis-contributions "$src/REDISCONTRIBUTIONS.txt"
+    fi
+
+    add_redis_source_notices "$package" "$src"
+}
+
+# Redis has code of other authors in its own files, for example LZF and SipHash. Their licenses are
+# only in comments. redis-source-notices.txt has each different notice one time, after the name of
+# its file.
+add_redis_source_notices() {
+    local package="$1" src="$2" folders="src" dependency
+
+    if [ -d "$src/modules/vector-sets" ]; then
+        folders="$folders modules/vector-sets"
+    fi
+
+    for dependency in $(sed -n 's/^DEPENDENCY_TARGETS=//p' "$src/src/Makefile"); do
+        folders="$folders deps/$dependency"
+    done
+
+    (
+        cd "$src"
+        find $folders -name '*.[ch]' -type f | LC_ALL=C sort | LC_ALL=C xargs awk '
+            function check(comment, file) {
+                if (comment ~ /Redistribution and use|Permission is hereby granted|Permission to use, copy|provided .as-is|presented "as is"|To the extent possible under law|[Pp]ublic [Dd]omain|licensed under|MIT license/ && !seen[comment]++) {
+                    printf "%s\n\n%s\n", file, comment
+                }
+            }
+            FNR == 1 { if (lines != "") check(lines, previous); inside = 0; lines = ""; previous = FILENAME }
+            inside { block = block $0 "\n"; if (/\*\//) { inside = 0; check(block, FILENAME) } next }
+            /^[[:space:]]*\/\// { lines = lines $0 "\n"; next }
+            lines != "" { check(lines, FILENAME); lines = "" }
+            /\/\*/ { block = $0 "\n"; if (/\*\//) check(block, FILENAME); else inside = 1 }
+            END { if (lines != "") check(lines, previous) }
+        '
+    ) > "$package/licenses/redis-source-notices.txt" || fail "the notices in the source files of Redis could not be read"
 }
 
 redis_source() {
