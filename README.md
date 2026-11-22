@@ -64,8 +64,8 @@ A package with a source archive of its own (MySQL, Mailpit and cloudflared) gets
 fmt gets the version that the newest MariaDB releases name in `cmake/libfmt.cmake`, in the same
 update as MariaDB. ICU, libpng, OpenLDAP, APR and some other libraries stay in their version line of
 `sources.lock`, for example OpenLDAP 2.6. ngx_brotli has no releases. So it gets the newest commit.
-GMP changes rarely. So a person updates it. Then the workflow commits, pushes and starts the build.
-No person is needed for another update in a version line.
+GMP, Boost and protobuf change rarely. So a person updates them. Then the workflow commits, pushes
+and starts the build. No person is needed for another update in a version line.
 
 The owner gets an issue, and so an email, in three cases:
 
@@ -110,7 +110,7 @@ The owner gets an issue, and so an email, in three cases:
 | cloudflared | 1 | The official darwin-arm64 binary of cloudflared, repackaged as tar.xz with its Apache-2.0 license and the licenses of its Go modules. The build signs it again with an ad hoc signature. Nexus uses it for public links. The line 1 takes each release, because the version starts with the year. |
 | MySQL | 8.0, 8.4, 9.7 | The official Oracle builds for macOS on Apple silicon, repackaged: without the debug server, the test and MyISAM tools, the static libraries and the headers. Each release also carries the matching source archive. |
 | MariaDB | 10.11, 11.4, 11.8, 12.3 | Compiled, because MariaDB publishes no macOS builds. Without ColumnStore, RocksDB, Mroonga, Spider, CONNECT, OQGraph, S3, Galera and the compression providers. The package keeps the server and the client tools, with links under the mysql* names. Run `scripts/mariadb-install-db` from the package folder with `--basedir=.`, because the script breaks on a space in the path. |
-| PostgreSQL | 14, 15, 16, 17, 18, 19 | With ICU, libxml2, uuid and all contrib modules (pgcrypto, uuid-ossp, citext, hstore, pg_stat_statements and more). From 15 on also with pgvector. OpenSSL and ICU are shared libraries in the package: libpq refuses a static OpenSSL. |
+| PostgreSQL | 14, 15, 16, 17, 18, 19 | With ICU, libxml2, uuid and all contrib modules (pgcrypto, uuid-ossp, citext, hstore, pg_stat_statements and more). From 15 on also with pgvector, PostGIS 3.7 (with topology and vector tiles, without raster) and pgRouting 4.0. OpenSSL, ICU, GEOS, PROJ and GMP are shared libraries in the package: libpq refuses a static OpenSSL, and GEOS and GMP have the LGPL license. From 15 on the license of the package is PostgreSQL and GPL-2.0-or-later. |
 
 ## PHP
 

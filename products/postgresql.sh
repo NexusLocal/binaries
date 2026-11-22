@@ -8,8 +8,13 @@
 COMPILED_PREFIX=/var/empty/nexus/postgresql
 
 # Revision 2 added pgvector and the licenses of the code of other authors. Revision 3 adds PostGIS
-# and pgRouting.
-POSTGRESQL_REVISION=3
+# and pgRouting. PostgreSQL 14 has no extensions. So it stays on revision 2.
+postgresql_revision() {
+    case "$1" in
+        14) echo 2 ;;
+        *) echo 3 ;;
+    esac
+}
 
 # The libraries of PostGIS that the package has as shared libraries: GEOS and GMP have the LGPL
 # license, and more than one file uses GEOS and PROJ.
@@ -240,5 +245,5 @@ build_product() {
         write_source_file "$package" "$source_name" openssl icu
     fi
 
-    PACKAGE_LINE="$1" PACKAGE_REVISION="$POSTGRESQL_REVISION" archive_package postgresql "$version" "$license"
+    PACKAGE_LINE="$1" PACKAGE_REVISION="$(postgresql_revision "$1")" archive_package postgresql "$version" "$license"
 }
