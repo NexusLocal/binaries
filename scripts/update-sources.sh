@@ -18,8 +18,9 @@
 #   - WordPress: the .sha1 file next to the archive
 #   - Go: the JSON of the downloads on go.dev
 #
-# A source without an upstream checksum (PECL, MySQL, nginx, GNU and the tag archives of GitHub)
-# is downloaded twice, and both downloads must give the same SHA-256.
+# A source without an upstream checksum (PECL, MySQL, nginx, GNU, FreeType, libpng, libwebp,
+# OpenLDAP, pkgconf and the archives of GitHub tags and commits) is downloaded twice, and both
+# downloads must give the same SHA-256.
 #
 # A package with a source archive of its own (<name>-source) gets both in one update.
 #
@@ -87,10 +88,17 @@ upstream_checksum() {
 # the new line of sources.lock, a tab and the method of the check. A failure goes to the summary
 # and prints nothing.
 checked_line() {
-    local name="$1" current="$2" newest="$3" url new_url file sha256 expected method
+    local name="$1" current="$2" newest="$3" url new_url file sha256 expected method commit
 
     url="$(awk -v name="$name" '$1 == name { print $4 }' "$lock")"
     new_url="${url//$current/$newest}"
+
+    # The URL of a project without releases has the whole commit. Its version is only the start.
+    if [[ "$url" =~ /archive/([0-9a-f]{40})\. ]]; then
+        commit="$(gh api "repos/$(echo "$url" | cut -d/ -f4-5)/commits/$newest" --jq .sha 2>/dev/null)"
+        new_url="${url/${BASH_REMATCH[1]}/$commit}"
+    fi
+
     file="$work/$name-${new_url##*/}"
 
     if [ "$new_url" = "$url" ] || ! fetch "$new_url" "$file"; then
@@ -138,9 +146,10 @@ update_source() {
 
     # These packages have one line that follows the newest release. A new major version is a new
     # line, and scripts/check-lines.sh reports it. cloudflared is not in this list. Its version
-    # starts with the year. Its one line 1 takes each release.
+    # starts with the year. Its one line 1 takes each release. A new major version of ICU changes the
+    # sort order of PostgreSQL databases.
     case "$name" in
-        mailpit | composer | wp-cli | redis-8)
+        mailpit | composer | wp-cli | redis-8 | icu)
             if [ "${newest%%.*}" != "${current%%.*}" ]; then
                 echo "- $name: $newest is a new major version. It needs the choice of the owner." >> "$summary"
                 return

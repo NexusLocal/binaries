@@ -57,11 +57,13 @@ fails and publishes nothing when `main` has a newer commit that starts a Build.
 The workflow Updates runs each day. `scripts/update-sources.sh` updates `sources.lock` to the
 newest release in each version line, and `support.lock` to the newest end of security fixes. It
 checks each download against the checksum that upstream publishes. A source without such a
-checksum (PECL, MySQL, nginx, GNU and the tag archives of GitHub) is downloaded twice, and both
-downloads must be the same. A package with a source archive of its own (MySQL, Mailpit and
-cloudflared) gets both in one update. fmt gets the version that the newest MariaDB releases name
-in `cmake/libfmt.cmake`, in the same update as MariaDB. Then the workflow commits, pushes and starts the build. No person is
-needed for an update in a version line.
+checksum (PECL, MySQL, nginx, GNU, FreeType, libpng, libwebp, OpenLDAP, pkgconf and the archives of
+GitHub tags and commits) is downloaded twice, and both downloads must be the same. A package with a
+source archive of its own (MySQL, Mailpit and cloudflared) gets both in one update. fmt gets the
+version that the newest MariaDB releases name in `cmake/libfmt.cmake`, in the same update as
+MariaDB. libpng, OpenLDAP, APR and APR-util stay in their version line (1.6, 2.6, 1.7 and 1.6). Then
+the workflow commits, pushes and starts the build. No person is needed for an update in a version
+line.
 
 The owner gets an issue, and so an email, in three cases:
 

@@ -27,7 +27,24 @@ report() {
         return
     fi
 
-    if [ "$current" != "$newest" ]; then
+    # A release of an older line can be the newest release of a project. endoflife.date can also be
+    # later than a person who updated sources.lock. So an older version is no update.
+    if [ "$(printf '%s\n%s\n' "$current" "$newest" | sort -V | tail -1)" != "$current" ]; then
+        echo "- $name: $current -> $newest"
+    elif [ "${NEXUS_SHOW_ALL:-}" = "1" ]; then
+        echo "  $name: $current is the newest"
+    fi
+}
+
+# For a project without releases. Its version in sources.lock is the start of a commit.
+report_commit() {
+    local name="$1" current newest
+    current="$(pinned "$name")"
+    newest="$(github_api "repos/$2/commits/HEAD" | jq -r .sha | cut -c "1-${#current}")"
+
+    if [ -z "$newest" ] || [ "$newest" = "null" ]; then
+        echo "- $name: the newest version could not be read"
+    elif [ "$current" != "$newest" ]; then
         echo "- $name: $current -> $newest"
     elif [ "${NEXUS_SHOW_ALL:-}" = "1" ]; then
         echo "  $name: $current is the newest"
@@ -57,6 +74,18 @@ github_latest() {
 # For a project that has tags such as v0.8.7 and no releases.
 github_latest_tag() {
     github_api "repos/$1/tags?per_page=100" | jq -r '.[].name' | sed -nE 's/^v([0-9]+(\.[0-9]+)+)$/\1/p' | sort -V | tail -1
+}
+
+# For a project with many tags. The prefix gives the tags of one version line, for example v1.6.
+github_line_tag() {
+    github_api "repos/$1/git/matching-refs/tags/$2" | jq -r '.[].ref' | sed -nE 's#^refs/tags/v([0-9]+(\.[0-9]+)+)$#\1#p' | sort -V | tail -1
+}
+
+# The newest version in the list of files of a download folder. With a line such as 2.6, only the
+# versions of that line count.
+listed_latest() {
+    curl -fsSL --max-time 30 "$1" | grep -oE "$2-[0-9]+(\.[0-9]+)+\.(tar\.(xz|bz2)|tgz)" | sed -E "s/^$2-//; s/\.(tar\.(xz|bz2)|tgz)$//" |
+        awk -v line="${3:-}" 'line == "" || index($0, line ".") == 1' | sort -V | tail -1
 }
 
 pecl_latest() {
@@ -123,6 +152,21 @@ report libjpeg-turbo "$(github_latest libjpeg-turbo/libjpeg-turbo "")"
 report oniguruma "$(github_latest kkos/oniguruma)"
 report libyaml "$(github_latest yaml/libyaml "")"
 report imagemagick "$(github_latest ImageMagick/ImageMagick "")"
+# A new major version of ICU changes the sort order of the PostgreSQL databases of the users. So
+# update-sources.sh leaves it to the owner.
+report icu "$(github_latest unicode-org/icu release-)"
+report libpng "$(github_line_tag pnggroup/libpng "v$(pinned libpng | cut -d. -f1-2).")"
+report libwebp "$(github_latest_tag webmproject/libwebp)"
+report freetype "$(listed_latest https://download.savannah.gnu.org/releases/freetype/ freetype)"
+report gettext "$(listed_latest https://ftp.gnu.org/gnu/gettext/ gettext)"
+report openldap "$(listed_latest https://www.openldap.org/software/download/OpenLDAP/openldap-release/ openldap "$(pinned openldap | cut -d. -f1-2)")"
+report apr "$(listed_latest https://archive.apache.org/dist/apr/ apr "$(pinned apr | cut -d. -f1-2)")"
+report apr-util "$(listed_latest https://archive.apache.org/dist/apr/ apr-util "$(pinned apr-util | cut -d. -f1-2)")"
+report headers-more "$(github_latest_tag openresty/headers-more-nginx-module)"
+report_commit ngx_brotli google/ngx_brotli
+report pkgconf "$(listed_latest https://distfiles.ariadne.space/pkgconf/ pkgconf)"
+report m4 "$(listed_latest https://ftp.gnu.org/gnu/m4/ m4)"
+report autoconf "$(listed_latest https://ftp.gnu.org/gnu/autoconf/ autoconf)"
 report cmake "$(github_latest Kitware/CMake)"
 report ninja "$(github_latest ninja-build/ninja)"
 report go "$(curl -fsS --max-time 30 'https://go.dev/dl/?mode=json' | jq -r '.[0].version' | sed 's/^go//')"
