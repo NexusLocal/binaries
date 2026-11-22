@@ -29,7 +29,8 @@ and its size.
 After every successful build on `main`, CI publishes each new package as the release
 `<name>-<version>-r<revision>`, with the package, its JSON file and every source archive it was
 built from. A release that exists already never changes. A recipe sets `PACKAGE_REVISION` higher
-when it changes and the upstream version stays the same.
+when it changes and the upstream version stays the same. When only the sources of a package
+change, for example OpenSSL, `scripts/publish.sh` gives it the next revision by itself.
 
 The Nexus app reads
 [`manifest.json`](https://github.com/NexusLocal/binaries/releases/latest/download/manifest.json),

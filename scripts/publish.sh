@@ -6,8 +6,10 @@
 #   GH_TOKEN=... scripts/publish.sh dist
 #
 # Each package gets the release <name>-<version>-r<revision> with the package, its JSON file and
-# every source archive it was built from. A release that exists already stays as it is, and the
-# manifest uses its files. So a package that the manifest names never changes afterwards.
+# every source archive it was built from. A release that exists already stays as it is. When the
+# newest release of a version has the same recipe and the same sources, the manifest uses its
+# files. Otherwise the package gets the next revision. So a package that the manifest names never
+# changes afterwards.
 #
 # scripts/release-manifest.sh publishes the manifest as a new release, which becomes the latest
 # release:
@@ -38,34 +40,93 @@ download_verified() {
     echo "$sha256  $target" | shasum -a 256 -c --status || { echo "error: SHA-256 mismatch for $url" >&2; exit 1; }
 }
 
-publish_package() {
-    local json="$1" tag file sources name version url sha256 source_file
+# The highest revision of <name>-<version> that has a release, or nothing.
+newest_revision() {
+    gh api --paginate "repos/$repo/git/matching-refs/tags/$1-r" --jq '.[].ref' |
+        sed -nE "s|^refs/tags/$1-r([0-9]+)\$|\1|p" | sort -n | tail -1
+}
+
+source_lines() {
+    grep -E '^[^ ]+ [^ ]+ [0-9a-f]{64} ' "$1"
+}
+
+# An older release has no recipe_revision. Its revision is the revision of its recipe.
+recipe_revision() {
+    jq -r '.recipe_revision // .revision' "$1"
+}
+
+# The URL of a source does not count, because its SHA-256 says what is in it.
+same_build() {
+    local json="$1" released="$2"
+
+    [ "$(recipe_revision "$json")" = "$(recipe_revision "$released")" ] || return 1
+    [ "$(source_lines "${json%.json}.sources.txt" | cut -d' ' -f1-3 | sort)" = "$(source_lines "${released%.json}.sources.txt" | cut -d' ' -f1-3 | sort)" ]
+}
+
+create_release() {
+    local json="$1" package_sources="$2" tag file sources name version url sha256 source_file
     tag="$(jq -r .tag "$json")"
     file="$(jq -r .file "$json")"
 
-    if gh release view "$tag" --repo "$repo" > /dev/null 2>&1; then
-        echo "==> $tag exists already, the manifest keeps its files"
-        gh release download "$tag" --repo "$repo" --pattern "${file%.tar.xz}.json" --dir "$work/released" --clobber
-        json="$work/released/${file%.tar.xz}.json"
-    else
-        echo "==> create the release $tag"
-        sources="$work/sources-$tag"
-        mkdir -p "$sources"
+    echo "==> create the release $tag"
+    sources="$work/sources-$tag"
+    mkdir -p "$sources"
 
-        grep -E '^[^ ]+ [^ ]+ [0-9a-f]{64} ' "$dist/${file%.tar.xz}.sources.txt" | while read -r name version sha256 url; do
-            source_file="$sources/source-$name-$version-${url##*/}"
-            download_verified "$url" "$sha256" "$source_file"
-        done
+    source_lines "$package_sources" | while read -r name version sha256 url; do
+        source_file="$sources/source-$name-$version-${url##*/}"
+        download_verified "$url" "$sha256" "$source_file"
+    done
 
-        gh release create "$tag" --repo "$repo" --latest=false \
-            --title "$(jq -r '.name + " " + .version + " (revision " + (.revision | tostring) + ")"' "$json")" \
-            --notes "Built from the sources attached to this release. See ${file%.tar.xz}.sources.txt for their SHA-256 and URLs." \
-            "$dist/$file" "$json" "$dist/${file%.tar.xz}.sources.txt" "$sources"/*
-    fi
+    gh release create "$tag" --repo "$repo" --latest=false \
+        --title "$(jq -r '.name + " " + .version + " (revision " + (.revision | tostring) + ")"' "$json")" \
+        --notes "Built from the sources attached to this release. See ${file%.tar.xz}.sources.txt for their SHA-256 and URLs." \
+        "$dist/$file" "$json" "$package_sources" "$sources"/*
+}
+
+add_entry() {
+    local json="$1" tag file
+    tag="$(jq -r .tag "$json")"
+    file="$(jq -r .file "$json")"
 
     jq -c --arg url "https://github.com/$repo/releases/download/$tag/$file" \
         '{name, version, line, revision, url: $url, sha256, size, format: "tar.xz", minimum_macos, architecture, license}' \
         "$json" >> "$entries"
+}
+
+# A new library gives a package with the version and the recipe revision of a release that exists.
+# Such a package gets the next revision. Without it, the update would wait for the next release of
+# PHP or PostgreSQL.
+publish_package() {
+    local json="$1" base version newest released revision recipe
+    base="$(basename "$json" .json)"
+    version="$(jq -r '.name + "-" + .version' "$json")"
+    newest="$(newest_revision "$version")"
+
+    if [ -z "$newest" ]; then
+        create_release "$json" "$dist/$base.sources.txt"
+        add_entry "$json"
+        return
+    fi
+
+    released="$work/released/$version-r$newest"
+    gh release download "$version-r$newest" --repo "$repo" --pattern "$base.json" --pattern "$base.sources.txt" --dir "$released" --clobber
+
+    if same_build "$json" "$released/$base.json"; then
+        echo "==> $version-r$newest has the same recipe and sources, the manifest keeps its files"
+        add_entry "$released/$base.json"
+        return
+    fi
+
+    recipe="$(recipe_revision "$json")"
+    revision=$((newest + 1))
+    if [ "$recipe" -gt "$revision" ]; then
+        revision="$recipe"
+    fi
+
+    mkdir -p "$work/new"
+    jq --argjson revision "$revision" --arg tag "$version-r$revision" '.revision = $revision | .tag = $tag' "$json" > "$work/new/$base.json"
+    create_release "$work/new/$base.json" "$dist/$base.sources.txt"
+    add_entry "$work/new/$base.json"
 }
 
 add_upstream_entry() {
@@ -85,9 +146,6 @@ add_upstream_entry() {
 # and the manifest is written to <folder>/manifest.json.
 if [ "${NEXUS_DRY_RUN:-}" = "1" ]; then
     gh() {
-        if [ "$1 $2" = "release view" ]; then
-            return 1
-        fi
         echo "[dry run] gh $1 $2 $3 ..." >&2
     }
     download_verified() {

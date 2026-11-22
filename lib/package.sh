@@ -179,7 +179,8 @@ write_source_file() {
 # PACKAGE_LINE is the version line that Nexus offers, such as 8.5, or 8 for the newest Redis 8.
 # Without it, the line is the first two parts of the version. PACKAGE_REVISION goes up when a
 # recipe changes and the upstream version stays the same. The release tag is
-# <name>-<version>-r<revision>.
+# <name>-<version>-r<revision>. scripts/publish.sh raises the revision of a package with other
+# sources than its newest release. recipe_revision stays the PACKAGE_REVISION of the recipe.
 archive_package() {
     local name="$1" version="$2" license="$3" package archive sha256 size line revision
 
@@ -203,6 +204,7 @@ archive_package() {
   "version": "$version",
   "line": "$line",
   "revision": $revision,
+  "recipe_revision": $revision,
   "tag": "$name-$version-r$revision",
   "file": "$(basename "$archive")",
   "sha256": "$sha256",
