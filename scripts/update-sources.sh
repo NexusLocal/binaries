@@ -18,9 +18,9 @@
 #   - WordPress: the .sha1 file next to the archive
 #   - Go: the JSON of the downloads on go.dev
 #
-# A source without an upstream checksum (PECL, MySQL, nginx, GNU, FreeType, libpng, libwebp,
-# OpenLDAP, pkgconf and the archives of GitHub tags and commits) is downloaded twice, and both
-# downloads must give the same SHA-256.
+# Some sources have no upstream checksum: PECL, MySQL, nginx, GNU, FreeType, libpng, libwebp,
+# OpenLDAP, pkgconf and the archives of GitHub tags and commits. Such a source is downloaded twice.
+# Both downloads must give the same SHA-256.
 #
 # A package with a source archive of its own (<name>-source) gets both in one update.
 #
@@ -95,7 +95,13 @@ checked_line() {
 
     # The URL of a project without releases has the whole commit. Its version is only the start.
     if [[ "$url" =~ /archive/([0-9a-f]{40})\. ]]; then
-        commit="$(gh api "repos/$(echo "$url" | cut -d/ -f4-5)/commits/$newest" --jq .sha 2>/dev/null)"
+        commit="$(gh api "repos/$(echo "$url" | cut -d/ -f4-5)/commits/$newest" --jq .sha 2>/dev/null | grep -xE '[0-9a-f]{40}')"
+
+        if [ -z "$commit" ]; then
+            echo "- failed: $name $newest. The commit could not be read." >> "$summary"
+            return
+        fi
+
         new_url="${url/${BASH_REMATCH[1]}/$commit}"
     fi
 
@@ -146,10 +152,9 @@ update_source() {
 
     # These packages have one line that follows the newest release. A new major version is a new
     # line, and scripts/check-lines.sh reports it. cloudflared is not in this list. Its version
-    # starts with the year. Its one line 1 takes each release. A new major version of ICU changes the
-    # sort order of PostgreSQL databases.
+    # starts with the year. Its one line 1 takes each release.
     case "$name" in
-        mailpit | composer | wp-cli | redis-8 | icu)
+        mailpit | composer | wp-cli | redis-8)
             if [ "${newest%%.*}" != "${current%%.*}" ]; then
                 echo "- $name: $newest is a new major version. It needs the choice of the owner." >> "$summary"
                 return

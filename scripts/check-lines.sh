@@ -9,20 +9,18 @@
 # workflow opens an issue for it and changes nothing. Old lines that Nexus left out on purpose
 # do not count: only a line newer than the newest line of support.lock does. MySQL and MariaDB
 # count only with a long-term support release, because their other releases come each quarter.
-# cloudflared has no report here. Its one line 1 takes each release, also in a new year.
+# cloudflared has no report here. Its one line 1 takes each release, also in a new year. A library
+# counts with a line newer than its line in sources.lock.
 #
 # Needs curl and jq. It uses GH_TOKEN for the GitHub API when it is set.
 
 set -uo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$root/scripts/upstream.sh"
 
 newest_known() {
     awk -v name="$1" '$1 == name { print $2 }' "$root/support.lock" | sort -V | tail -1
-}
-
-newer() {
-    [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ]
 }
 
 # endoflife.date product, the name in support.lock, the title, and a filter:
@@ -50,18 +48,6 @@ report_cycles() {
     done | sort -u
 }
 
-# Without a token, GitHub accepts 60 API requests an hour from one address. The runners of GitHub
-# Actions share their addresses. So a request can get "403 Forbidden" before the run made 60. The
-# token of the workflow has its own limit of 1,000 requests an hour.
-github_api() {
-    if [ -n "${GH_TOKEN:-}" ]; then
-        curl -fsS --max-time 30 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/$1"
-        return
-    fi
-
-    curl -fsS --max-time 30 "https://api.github.com/$1"
-}
-
 # A GitHub release with a new major version, for a package with one line.
 report_major() {
     local repo="$1" name="$2" title="$3" prefix="${4:-v}" known latest
@@ -70,6 +56,18 @@ report_major() {
 
     if [ -n "$latest" ] && [ "$latest" != "null" ] && [ "${latest%%.*}" -gt "${known%%.*}" ] 2>/dev/null; then
         echo "- $title ${latest%%.*}"
+    fi
+}
+
+# The source name in sources.lock, the title, the number of fields in its version line and the
+# newest version of all lines.
+report_library() {
+    local known newest
+    known="$(pinned_line "$1" "$3")"
+    newest="$(echo "$4" | cut -d. -f"1-$3")"
+
+    if [ -n "$known" ] && [ -n "$newest" ] && newer "$newest" "$known"; then
+        echo "- $2 $newest"
     fi
 }
 
@@ -84,3 +82,15 @@ report_cycles apache-http-server httpd "Apache httpd"
 report_major axllent/mailpit mailpit Mailpit
 report_major wp-cli/wp-cli wp-cli WP-CLI
 report_major composer/composer composer Composer ""
+report_library icu ICU 1 "$(github_latest unicode-org/icu release-)"
+report_library libpng libpng 2 "$(github_line_tag pnggroup/libpng v)"
+report_library libwebp libwebp 1 "$(github_latest_tag webmproject/libwebp)"
+report_library freetype FreeType 1 "$(listed_latest https://download.savannah.gnu.org/releases/freetype/ freetype)"
+report_library gettext gettext 1 "$(listed_latest https://ftp.gnu.org/gnu/gettext/ gettext)"
+report_library openldap OpenLDAP 2 "$(listed_latest https://www.openldap.org/software/download/OpenLDAP/openldap-release/ openldap)"
+report_library apr APR 2 "$(listed_latest https://archive.apache.org/dist/apr/ apr)"
+report_library apr-util APR-util 2 "$(listed_latest https://archive.apache.org/dist/apr/ apr-util)"
+report_library headers-more headers-more 1 "$(github_latest_tag openresty/headers-more-nginx-module)"
+report_library pkgconf pkgconf 1 "$(listed_latest https://distfiles.ariadne.space/pkgconf/ pkgconf)"
+report_library m4 m4 1 "$(listed_latest https://ftp.gnu.org/gnu/m4/ m4)"
+report_library autoconf autoconf 1 "$(listed_latest https://ftp.gnu.org/gnu/autoconf/ autoconf)"

@@ -13,10 +13,7 @@
 set -uo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-pinned() {
-    awk -v name="$1" '$1 == name { print $2 }' "$root/sources.lock"
-}
+source "$root/scripts/upstream.sh"
 
 report() {
     local name="$1" newest="$2" current
@@ -29,7 +26,7 @@ report() {
 
     # A release of an older line can be the newest release of a project. endoflife.date can also be
     # later than a person who updated sources.lock. So an older version is no update.
-    if [ "$(printf '%s\n%s\n' "$current" "$newest" | sort -V | tail -1)" != "$current" ]; then
+    if newer "$newest" "$current"; then
         echo "- $name: $current -> $newest"
     elif [ "${NEXUS_SHOW_ALL:-}" = "1" ]; then
         echo "  $name: $current is the newest"
@@ -38,13 +35,14 @@ report() {
 
 # For a project without releases. Its version in sources.lock is the start of a commit.
 report_commit() {
-    local name="$1" current newest
+    local name="$1" current newest status
     current="$(pinned "$name")"
     newest="$(github_api "repos/$2/commits/HEAD" | jq -r .sha | cut -c "1-${#current}")"
+    status="$(github_api "repos/$2/compare/$current...$newest" | jq -r .status)"
 
-    if [ -z "$newest" ] || [ "$newest" = "null" ]; then
+    if [ -z "$newest" ] || [ "$newest" = "null" ] || [ -z "$status" ] || [ "$status" = "null" ]; then
         echo "- $name: the newest version could not be read"
-    elif [ "$current" != "$newest" ]; then
+    elif [ "$status" = "ahead" ]; then
         echo "- $name: $current -> $newest"
     elif [ "${NEXUS_SHOW_ALL:-}" = "1" ]; then
         echo "  $name: $current is the newest"
@@ -53,39 +51,6 @@ report_commit() {
 
 endoflife_latest() {
     curl -fsS --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '.[] | select(.cycle == $cycle) | .latest'
-}
-
-# Without a token, GitHub accepts 60 API requests an hour from one address. The runners of GitHub
-# Actions share their addresses. So a request can get "403 Forbidden" before the run made 60. The
-# token of the workflow has its own limit of 1,000 requests an hour.
-github_api() {
-    if [ -n "${GH_TOKEN:-}" ]; then
-        curl -fsS --max-time 30 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/$1"
-        return
-    fi
-
-    curl -fsS --max-time 30 "https://api.github.com/$1"
-}
-
-github_latest() {
-    github_api "repos/$1/releases/latest" | jq -r .tag_name | sed -E "s/^${2:-v}//"
-}
-
-# For a project that has tags such as v0.8.7 and no releases.
-github_latest_tag() {
-    github_api "repos/$1/tags?per_page=100" | jq -r '.[].name' | sed -nE 's/^v([0-9]+(\.[0-9]+)+)$/\1/p' | sort -V | tail -1
-}
-
-# For a project with many tags. The prefix gives the tags of one version line, for example v1.6.
-github_line_tag() {
-    github_api "repos/$1/git/matching-refs/tags/$2" | jq -r '.[].ref' | sed -nE 's#^refs/tags/v([0-9]+(\.[0-9]+)+)$#\1#p' | sort -V | tail -1
-}
-
-# The newest version in the list of files of a download folder. With a line such as 2.6, only the
-# versions of that line count.
-listed_latest() {
-    curl -fsSL --max-time 30 "$1" | grep -oE "$2-[0-9]+(\.[0-9]+)+\.(tar\.(xz|bz2)|tgz)" | sed -E "s/^$2-//; s/\.(tar\.(xz|bz2)|tgz)$//" |
-        awk -v line="${3:-}" 'line == "" || index($0, line ".") == 1' | sort -V | tail -1
 }
 
 pecl_latest() {
@@ -152,21 +117,21 @@ report libjpeg-turbo "$(github_latest libjpeg-turbo/libjpeg-turbo "")"
 report oniguruma "$(github_latest kkos/oniguruma)"
 report libyaml "$(github_latest yaml/libyaml "")"
 report imagemagick "$(github_latest ImageMagick/ImageMagick "")"
-# A new major version of ICU changes the sort order of the PostgreSQL databases of the users. So
-# update-sources.sh leaves it to the owner.
-report icu "$(github_latest unicode-org/icu release-)"
-report libpng "$(github_line_tag pnggroup/libpng "v$(pinned libpng | cut -d. -f1-2).")"
-report libwebp "$(github_latest_tag webmproject/libwebp)"
-report freetype "$(listed_latest https://download.savannah.gnu.org/releases/freetype/ freetype)"
-report gettext "$(listed_latest https://ftp.gnu.org/gnu/gettext/ gettext)"
-report openldap "$(listed_latest https://www.openldap.org/software/download/OpenLDAP/openldap-release/ openldap "$(pinned openldap | cut -d. -f1-2)")"
-report apr "$(listed_latest https://archive.apache.org/dist/apr/ apr "$(pinned apr | cut -d. -f1-2)")"
-report apr-util "$(listed_latest https://archive.apache.org/dist/apr/ apr-util "$(pinned apr-util | cut -d. -f1-2)")"
-report headers-more "$(github_latest_tag openresty/headers-more-nginx-module)"
+# These sources stay in their version line. scripts/check-lines.sh reports a new line. A new major
+# version of ICU also changes the sort order of the PostgreSQL databases of the users.
+report icu "$(github_line_tag unicode-org/icu "release-$(pinned_line icu 1)." release-)"
+report libpng "$(github_line_tag pnggroup/libpng "v$(pinned_line libpng 2).")"
+report libwebp "$(github_line_tag webmproject/libwebp "v$(pinned_line libwebp 1).")"
+report freetype "$(listed_latest https://download.savannah.gnu.org/releases/freetype/ freetype "$(pinned_line freetype 1)")"
+report gettext "$(listed_latest https://ftp.gnu.org/gnu/gettext/ gettext "$(pinned_line gettext 1)")"
+report openldap "$(listed_latest https://www.openldap.org/software/download/OpenLDAP/openldap-release/ openldap "$(pinned_line openldap 2)")"
+report apr "$(listed_latest https://archive.apache.org/dist/apr/ apr "$(pinned_line apr 2)")"
+report apr-util "$(listed_latest https://archive.apache.org/dist/apr/ apr-util "$(pinned_line apr-util 2)")"
+report headers-more "$(github_line_tag openresty/headers-more-nginx-module "v$(pinned_line headers-more 1).")"
 report_commit ngx_brotli google/ngx_brotli
-report pkgconf "$(listed_latest https://distfiles.ariadne.space/pkgconf/ pkgconf)"
-report m4 "$(listed_latest https://ftp.gnu.org/gnu/m4/ m4)"
-report autoconf "$(listed_latest https://ftp.gnu.org/gnu/autoconf/ autoconf)"
+report pkgconf "$(listed_latest https://distfiles.ariadne.space/pkgconf/ pkgconf "$(pinned_line pkgconf 1)")"
+report m4 "$(listed_latest https://ftp.gnu.org/gnu/m4/ m4 "$(pinned_line m4 1)")"
+report autoconf "$(listed_latest https://ftp.gnu.org/gnu/autoconf/ autoconf "$(pinned_line autoconf 1)")"
 report cmake "$(github_latest Kitware/CMake)"
 report ninja "$(github_latest ninja-build/ninja)"
 report go "$(curl -fsS --max-time 30 'https://go.dev/dl/?mode=json' | jq -r '.[0].version' | sed 's/^go//')"
@@ -174,13 +139,25 @@ for extension in xdebug pcov redis apcu yaml imagick mailparse; do report "pecl-
 
 # The last day of security fixes in support.lock, against endoflife.date. The LTS flags are not
 # compared: endoflife.date gives a date for some of them, and the decision record sets them.
+# A line newer than each line that endoflife.date lists is unlisted.
 endoflife_end() {
-    curl -fsS --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '.[] | select(.cycle == $cycle) | if .eol == false then "-" else .eol end'
+    curl -fsS --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '
+        def numbers: split(".") | map(tonumber? // 0);
+        (map(select(.cycle == $cycle))[0]) as $match
+        | if $match != null then (if $match.eol == false then "-" else $match.eol end)
+          elif ($cycle | numbers) > (map(.cycle | numbers) | max) then "unlisted"
+          else empty end'
 }
 
 report_support() {
     local name="$1" line="$2" newest="$3" current
     current="$(awk -v name="$name" -v line="$line" '$1 == name && $2 == line { print $4 }' "$root/support.lock")"
+
+    # endoflife.date can list a new line some days later. Until then the date in support.lock stays.
+    if [ "$newest" = "unlisted" ]; then
+        [ "${NEXUS_SHOW_ALL:-}" != "1" ] || echo "  support of $name $line: endoflife.date does not list this version yet"
+        return
+    fi
 
     if [ -z "$newest" ] || [ "$newest" = "null" ]; then
         echo "- support of $name $line: the end of security fixes could not be read"
@@ -198,7 +175,7 @@ for line in 10.11 11.4 11.8 12.3; do report_support mariadb "$line" "$(endoflife
 for line in 14 15 16 17 18 19; do report_support postgresql "$line" "$(endoflife_end postgresql "$line")"; done
 report_support redis 7.2 "$(endoflife_end redis 7.2)"
 report_support redis 8.2 "$(endoflife_end redis 8.2)"
-report_support redis 8 "$(endoflife_end redis "$(pinned redis-8 | cut -d. -f1-2)")"
-report_support nginx "$(pinned nginx | cut -d. -f1-2)" "$(endoflife_end nginx "$(pinned nginx | cut -d. -f1-2)")"
+report_support redis 8 "$(endoflife_end redis "$(pinned_line redis-8 2)")"
+report_support nginx "$(pinned_line nginx 2)" "$(endoflife_end nginx "$(pinned_line nginx 2)")"
 report_support httpd 2.4 "$(endoflife_end apache-http-server 2.4)"
 for line in 22 24 26; do report_support node "$line" "$(endoflife_end nodejs "$line")"; done
