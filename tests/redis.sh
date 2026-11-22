@@ -35,7 +35,7 @@ licenses="redis hiredis linenoise lua hdr_histogram hdr_histogram-copying fpconv
 case "$(basename "$root")" in
     redis-7.2.*) ;;
     redis-8.2.*) licenses="$licenses fast_float" ;;
-    *) licenses="$licenses fast_float xxhash tre" ;;
+    *) licenses="$licenses fast_float xxhash tre croaring" ;;
 esac
 missing=""
 for name in $licenses; do

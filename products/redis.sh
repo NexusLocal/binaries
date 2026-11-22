@@ -28,6 +28,7 @@ add_redis_licenses() {
             fast_float) add_license_from_comment "$package" fast_float "$src/deps/fast_float/fast_float.h" "MIT License" ;;
             xxhash) add_license "$package" xxhash "$src/deps/xxhash/LICENSE" ;;
             tre) add_license "$package" tre "$src/deps/tre/LICENSE" ;;
+            croaring) add_license "$package" croaring "$src/deps/croaring/LICENSE" ;;
             *) fail "Redis builds deps/$dependency, and products/redis.sh has no license for it" ;;
         esac
     done
