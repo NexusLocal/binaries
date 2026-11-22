@@ -23,7 +23,10 @@ jobs:
       group: release
       cancel-in-progress: false
     steps:
+      # The newest support.lock, also when somebody starts an old run again.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: main
 
       - name: Add the support data to the manifest
         env:

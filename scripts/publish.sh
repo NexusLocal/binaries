@@ -185,6 +185,24 @@ if [ "${NEXUS_DRY_RUN:-}" = "1" ]; then
     }
 fi
 
+# Somebody can start an old run of the Build workflow again. Its packages are older than the
+# packages of a newer commit. So it publishes nothing when main has a newer commit that starts a
+# Build. These are the paths in build.yml.
+stop_old_build() {
+    local commit changes
+    commit="${GITHUB_SHA:-$(git -C "$root" rev-parse HEAD)}"
+    changes="$(gh api "repos/$repo/compare/$commit...main" --jq '.files[].filename')"
+
+    if grep -qE '^(build\.sh|sources\.lock|\.github/workflows/build\.yml|(lib|products|tests)/.+)$' <<< "$changes"; then
+        echo "::warning::main has a newer commit that starts a Build. This run of $commit publishes nothing."
+        exit 0
+    fi
+}
+
+if [ "${NEXUS_DRY_RUN:-}" != "1" ]; then
+    stop_old_build
+fi
+
 # A server of a source can refuse a download. Then that package keeps its package of the newest
 # manifest and the others still get their update. bash ignores set -e in a condition. So the status
 # comes from $? and not from an if.

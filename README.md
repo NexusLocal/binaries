@@ -49,7 +49,8 @@ build. `scripts/check-updates.sh` reports a date that endoflife.date changed.
 `scripts/publish.sh` does this work. `NEXUS_DRY_RUN=1 scripts/publish.sh <folder>` shows what it
 would publish and writes the manifest into the folder, without a change on GitHub. A package
 whose build or publication failed keeps its package of the newest manifest. So one failure does
-not hold back the updates of the other packages.
+not hold back the updates of the other packages. An old run of Build that somebody starts again
+publishes nothing when `main` has a newer commit that starts a Build.
 
 ## Automatic updates
 
