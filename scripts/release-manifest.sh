@@ -16,9 +16,11 @@ path="${2:?usage: scripts/release-manifest.sh download <folder> | publish <manif
 repo="${GITHUB_REPOSITORY:-NexusLocal/binaries}"
 
 # The tag of the first manifest release is "manifest". Each later tag starts with "manifest-".
+# createdAt is the date of the commit. Two manifests of one commit have the same createdAt. So only
+# publishedAt gives the newest manifest.
 newest_manifest_tag() {
-    gh release list --repo "$repo" --limit 1000 --exclude-drafts --json tagName,createdAt \
-        --jq '[.[] | select(.tagName | startswith("manifest"))] | sort_by(.createdAt) | last | .tagName // empty'
+    gh release list --repo "$repo" --limit 1000 --exclude-drafts --json tagName,publishedAt \
+        --jq '[.[] | select(.tagName | startswith("manifest"))] | sort_by(.publishedAt) | last | .tagName // empty'
 }
 
 case "$action" in
