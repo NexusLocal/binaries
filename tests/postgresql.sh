@@ -109,7 +109,7 @@ if [ -n "$extensions" ]; then
     create index towns_place on towns using gist (place);
     select topology.createtopology('net', 4326);
     create table roads (id int, source int, target int, cost float);
-    insert into roads values (1, 1, 2, 1), (2, 2, 4, 1), (3, 1, 3, 1), (4, 3, 4, 5);"
+    insert into roads values (1, 1, 2, 1), (2, 2, 4, 1), (3, 1, 3, 1), (4, 3, 4, 5);" > /dev/null
     test_spatial nexus_test
     test_spatial_programs
     echo "==> $("${psql[@]}" -At -d nexus_test -c "select 'PostGIS ' || postgis_lib_version() || ' and pgRouting ' || pgr_version()") work"
