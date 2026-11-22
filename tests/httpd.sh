@@ -69,9 +69,9 @@ echo "==> start httpd on port $port"
 sleep 1
 
 headers="$(curl -fsS -D - -o /dev/null -H 'Accept-Encoding: br' "http://127.0.0.1:$port/index.txt")"
-echo "$headers" | grep -qi "^HTTP/1.1 200" || { echo "$headers"; echo "error: no 200 response" >&2; exit 1; }
-echo "$headers" | grep -qi "^X-Nexus-Test: ok" || { echo "$headers"; echo "error: mod_headers did not set the header" >&2; exit 1; }
-echo "$headers" | grep -qi "^Content-Encoding: br" || { echo "$headers"; echo "error: mod_brotli did not compress the response" >&2; exit 1; }
+grep -qi "^HTTP/1.1 200" <<< "$headers" || { echo "$headers"; echo "error: no 200 response" >&2; exit 1; }
+grep -qi "^X-Nexus-Test: ok" <<< "$headers" || { echo "$headers"; echo "error: mod_headers did not set the header" >&2; exit 1; }
+grep -qi "^Content-Encoding: br" <<< "$headers" || { echo "$headers"; echo "error: mod_brotli did not compress the response" >&2; exit 1; }
 
 redirect="$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' "http://127.0.0.1:$port/old")"
 case "$redirect" in

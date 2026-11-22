@@ -83,7 +83,7 @@ mkdir -p "$manifest"
 
 package_sources() {
     local url
-    url="$(jq -r --arg name "$1" --arg line "$2" '.packages[] | select(.name == $name and ($line == "" or .line == $line)) | .url' "$manifest/manifest.json" | head -1)"
+    url="$(jq -r --arg name "$1" --arg line "$2" '.packages[] | select(.name == $name and ($line == "" or .line == $line)) | .url' "$manifest/manifest.json" | sed -n 1p)"
     [ -n "$url" ] || return 1
     curl -fsSL --max-time 60 --retry 4 --retry-connrefused "${url%.tar.xz}.sources.txt" | grep -E '^[^ ]+ [^ ]+ [0-9a-f]{64} ' | cut -d' ' -f1-3
 }

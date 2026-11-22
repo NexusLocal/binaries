@@ -57,7 +57,7 @@ test_vector_index() {
     query="select id from embeddings order by $column <-> '[3,1,2]' limit 1"
     plan="$("${psql[@]}" -At -d "$database" -c "set enable_seqscan = off; explain $query")"
 
-    echo "$plan" | grep -q "$index" || { echo "error: vector does not use $index in $database: $plan" >&2; exit 1; }
+    grep -q "$index" <<< "$plan" || { echo "error: vector does not use $index in $database: $plan" >&2; exit 1; }
     [ "$("${psql[@]}" -At -d "$database" -c "set enable_seqscan = off; $query")" = "2" ] \
         || { echo "error: vector did not find the nearest row with $index in $database" >&2; exit 1; }
 }

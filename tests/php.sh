@@ -29,7 +29,7 @@ xmlwriter xsl zip zlib"
 modules="$("$php" -n -m)"
 missing=""
 for module in $built_in; do
-    echo "$modules" | grep -qx "$module" || missing="$missing $module"
+    grep -qx "$module" <<< "$modules" || missing="$missing $module"
 done
 [ -z "$missing" ] || { echo "error: built-in extensions are missing:$missing" >&2; exit 1; }
 echo "==> all $(echo $built_in | wc -w | tr -d ' ') built-in extensions are present"
@@ -52,8 +52,8 @@ for file in "$extensions"/*.so; do
     esac
 
     output="$("$php" "${flags[@]}" -m 2>&1)" || true
-    if ! echo "$output" | grep -qx "$(module_name "$name")"; then
-        echo "$output" | head -5
+    if ! grep -qx "$(module_name "$name")" <<< "$output"; then
+        sed -n 1,5p <<< "$output"
         echo "error: the shared extension $name does not load" >&2
         exit 1
     fi
@@ -157,7 +157,7 @@ if ($power !== bcpowmod("123456789012345678901234567890", "65537", "340282366920
 }
 echo "  GMP ", GMP_VERSION, "\n";
 '
-otool -L "$extensions/gmp.so" | grep -q "@rpath/libgmp" || { echo "error: gmp.so does not use the shared library of GMP" >&2; exit 1; }
+otool -L "$extensions/gmp.so" | grep "@rpath/libgmp" > /dev/null || { echo "error: gmp.so does not use the shared library of GMP" >&2; exit 1; }
 
 echo "==> memcached stores a value with igbinary on a server that speaks the text protocol"
 "$php" -n -d "extension_dir=$extensions" -d extension=igbinary -d extension=memcached -r '

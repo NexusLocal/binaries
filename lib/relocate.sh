@@ -1,5 +1,7 @@
+# A grep -q at the end of a pipeline stops at its first match. The program before it can then fail on
+# its next line, and pipefail gives the result of no match. So grep reads all lines here.
 is_macho() {
-    [ -f "$1" ] && [ ! -L "$1" ] && file -b "$1" | grep -q "Mach-O"
+    [ -f "$1" ] && [ ! -L "$1" ] && file -b "$1" | grep "Mach-O" > /dev/null
 }
 
 macho_files() {
@@ -47,7 +49,7 @@ relocate_package() {
     macho_files "$package" | while IFS= read -r path; do
         chmod u+w "$path"
 
-        if file -b "$path" | grep -q "dynamically linked shared library"; then
+        if file -b "$path" | grep "dynamically linked shared library" > /dev/null; then
             id="$(otool -D "$path" | tail -n 1)"
             run_or_fail install_name_tool -id "@rpath/$(basename "$id")" "$path"
         fi
@@ -67,7 +69,7 @@ relocate_package() {
 
         if [ -d "$package/lib" ]; then
             local rpath="@loader_path/$(relative_path "$package/lib" "$(dirname "$path")")"
-            if ! otool -l "$path" | grep -A2 LC_RPATH | grep -q "path $rpath "; then
+            if ! otool -l "$path" | grep -A2 LC_RPATH | grep "path $rpath " > /dev/null; then
                 run_or_fail install_name_tool -add_rpath "$rpath" "$path"
             fi
         fi

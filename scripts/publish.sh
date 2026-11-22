@@ -144,7 +144,7 @@ publish_package() {
     fi
 
     recipe="$(recipe_revision "$json")"
-    revision="$(echo "$revisions" | head -1)"
+    revision="$(echo "$revisions" | sed -n 1p)"
     revision=$((${revision:-0} + 1))
     if [ "$recipe" -gt "$revision" ]; then
         revision="$recipe"

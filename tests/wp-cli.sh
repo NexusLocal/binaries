@@ -57,7 +57,7 @@ wp() {
 version="$(lock_field wp-cli 2)"
 echo "==> WP-CLI $version on $("$php" -n -r 'echo PHP_VERSION;')"
 info="$(wp --info)"
-echo "$info" | grep -q "WP-CLI version:[[:space:]]*$version" || { echo "$info"; echo "error: wp --info does not give WP-CLI $version" >&2; exit 1; }
+grep -q "WP-CLI version:[[:space:]]*$version" <<< "$info" || { echo "$info"; echo "error: wp --info does not give WP-CLI $version" >&2; exit 1; }
 
 echo "==> install WordPress $(lock_field wordpress 2) on SQLite"
 (cd "$base/Nexus Test" && unzip -q "$base/wordpress.zip" && mv wordpress shop)

@@ -40,7 +40,7 @@ trap 'rm -rf "$work"' EXIT
 : > "$summary"
 
 first_hex() {
-    grep -oE '[0-9a-f]{64}' | head -1
+    grep -oE '[0-9a-f]{64}' | sed -n 1p
 }
 
 fetch() {
@@ -77,10 +77,10 @@ upstream_checksum() {
             curl -fsS --max-time 60 "$url.sha256sum" | first_hex
             ;;
         https://downloads.wordpress.org/*)
-            curl -fsS --max-time 60 "$url.sha1" | grep -oE '[0-9a-f]{40}' | head -1 | sed 's/^/sha1:/'
+            curl -fsS --max-time 60 "$url.sha1" | grep -oE '[0-9a-f]{40}' | sed -n '1s/^/sha1:/p'
             ;;
         https://download.osgeo.org/postgis/*)
-            curl -fsS --max-time 60 "$url.md5" | grep -oE '[0-9a-f]{32}' | head -1 | sed 's/^/md5:/'
+            curl -fsS --max-time 60 "$url.md5" | grep -oE '[0-9a-f]{32}' | sed -n '1s/^/md5:/p'
             ;;
         https://go.dev/dl/*)
             curl -fsS --max-time 60 'https://go.dev/dl/?mode=json&include=all' | jq -r --arg file "$file" '.[].files[] | select(.filename == $file) | .sha256'
