@@ -44,13 +44,20 @@ done
 [ -z "$missing" ] || { echo "error: licenses are missing:$missing" >&2; exit 1; }
 echo "==> the package has all $(echo $licenses | wc -w | tr -d ' ') license files"
 
-# One author of each library that has its license only in the source files.
-for author in "Marc Alexander Lehmann" "Makoto Matsumoto" "Jean-Philippe Aumasson" "Todd C. Miller" \
-    "William Ahern" "Mark Adler" "yinqiwen" "Georges Menie" "Harish Mallipeddi" "Matt Stancliff" \
-    "zhenwei pi" "Regents of the University of California" "Mark Pulford" "Mike Pall"; do
-    grep -q -F "$author" "$root/licenses/redis-source-notices.txt" ||
-        { echo "error: the notice of $author is missing" >&2; exit 1; }
-done
-echo "==> the package has the notices of the source files"
+# One author of each library that has its license only in the source files. A new version of the
+# newest Redis 8 can drop a library. So that line only needs many notices.
+notices="$root/licenses/redis-source-notices.txt"
+authors="Marc Alexander Lehmann|Makoto Matsumoto|Jean-Philippe Aumasson|Todd C. Miller|William Ahern|Mark Adler|yinqiwen|Georges Menie|Harish Mallipeddi|Matt Stancliff|zhenwei pi|Regents of the University of California|David Robert Nadeau|Mark Pulford|Mike Pall"
+case "$(basename "$root")" in
+    redis-7.2.*) ;;
+    redis-8.2.*) authors="$authors|Valkey contributors" ;;
+    *) authors="" ;;
+esac
+while IFS= read -r author; do
+    grep -q -F "$author" "$notices" || { echo "error: the notice of $author is missing" >&2; exit 1; }
+done < <(tr '|' '\n' <<< "$authors")
+count="$(grep -cE '^(src|deps|modules)/' "$notices")"
+[ "$count" -ge 40 ] || { echo "error: the package has only $count notices of source files" >&2; exit 1; }
+echo "==> the package has $count notices of source files"
 
 echo "==> all Redis tests passed"

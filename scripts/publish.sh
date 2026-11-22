@@ -193,12 +193,18 @@ stop_old_build() {
     commit="${GITHUB_SHA:-$(git -C "$root" rev-parse HEAD)}"
 
     if ! changes="$(gh api "repos/$repo/compare/$commit...main" --jq '.files[] | .filename, (.previous_filename // empty)')"; then
-        echo "error: GitHub could not compare $commit with main, so nothing is published" >&2
+        echo "error: GitHub could not compare $commit with main. Nothing is published." >&2
+        exit 1
+    fi
+
+    # GitHub gives at most 300 files.
+    if [ "$(wc -l <<< "$changes")" -ge 300 ]; then
+        echo "error: main changed too many files since $commit. This run publishes nothing." >&2
         exit 1
     fi
 
     if grep -qE '^(build\.sh|sources\.lock|\.github/workflows/build\.yml|(lib|products|tests)/.+)$' <<< "$changes"; then
-        echo "error: main has a newer commit that starts a Build, so this run of $commit publishes nothing" >&2
+        echo "error: main has a newer commit that starts a Build. This run of $commit publishes nothing." >&2
         exit 1
     fi
 }
@@ -239,13 +245,13 @@ keep_previous_entries() {
 
     "$root/scripts/release-manifest.sh" download "$previous" > /dev/null || status=$?
 
-    if [ "$status" -eq 3 ]; then
+    if [ "$status" -eq 3 ] && [ -z "$failed" ]; then
         echo "==> no earlier manifest, so no package is kept"
         return
     fi
 
     if [ "$status" -ne 0 ]; then
-        echo "error: the newest manifest could not be read, so no manifest is published" >&2
+        echo "error: the newest manifest could not be read. No manifest is published." >&2
         exit 1
     fi
 

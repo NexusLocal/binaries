@@ -130,7 +130,7 @@ jobs:
 
   # The owner gets an issue and an email when a build, a test or the publication fails on main.
   report:
-    needs: [build, release]
+    needs: [build, release, wp-cli]
     if: ${{ failure() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:

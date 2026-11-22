@@ -62,9 +62,11 @@ add_redis_source_notices() {
 
     (
         cd "$src"
-        find $folders -name '*.[ch]' -type f | LC_ALL=C sort | LC_ALL=C xargs awk '
+        find $folders -name '*.[ch]' -type f -not -path 'src/modules/*' -not -path '*/adapters/*' \
+            -not -path '*/examples/*' -not -path '*/fuzzing/*' -not -path '*/test*' \
+            -not -name ssl.c -not -name hiredis_ssl.h | LC_ALL=C sort | LC_ALL=C xargs awk '
             function check(comment, file) {
-                if (comment ~ /Redistribution and use|Permission is hereby granted|Permission to use, copy|provided .as-is|presented "as is"|To the extent possible under law|[Pp]ublic [Dd]omain|licensed under|MIT license/ && !seen[comment]++) {
+                if (comment ~ /Redistribution and use|Permission is hereby granted|Permission to use, copy|provided .as-is|presented "as is"|To the extent possible under law|[Pp]ublic [Dd]omain|licensed under|MIT license|CC attribution license|available under BSD3 terms|SPDX-License-Identifier/ && !seen[comment]++) {
                     printf "%s\n\n%s\n", file, comment
                 }
             }
