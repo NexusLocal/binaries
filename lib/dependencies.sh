@@ -219,8 +219,8 @@ build_gettext() {
     mark_built gettext
 }
 
-# GMP has the LGPL license, so it stays a shared library that a user can replace. Without --build,
-# the result depends on the processor of the build machine.
+# GMP has the LGPL license. So it stays a shared library that a user can replace. --build keeps the
+# result independent of the processor of the build machine.
 build_gmp() {
     dependency_built gmp && return 0
     log "Building gmp $(source_version gmp) (shared)"

@@ -80,6 +80,9 @@ add_php_licenses() {
     source_name="$(igbinary_source "$minor")"
     add_license "$package" igbinary "$WORK_DIR/$source_name-$(source_version "$source_name")/COPYING"
 
+    # libmemcached 1.0.18 had this notice in md5.cc. Later versions have the same code without it.
+    add_license "$package" libmemcached-md5 "$NEXUS_REPO/licenses/libmemcached-md5.txt"
+
     add_license_from_comment "$package" memcached-g-fmt \
         "$WORK_DIR/pecl-memcached-$(source_version pecl-memcached)/g_fmt.c" "Permission to use"
 
@@ -299,7 +302,7 @@ build_product() {
     PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" pecl-imagick --with-imagick="$STAGE_DIR"
     build_pecl_extension "$package" pecl-mailparse
 
-    # libmemcached is C++, and its pkg-config file does not name the C++ library.
+    # libmemcached is C++. Its pkg-config file does not name the C++ library.
     LDFLAGS="$LDFLAGS -lc++" build_pecl_extension "$package" pecl-memcached \
         --with-libmemcached-dir="$STAGE_DIR" --with-zlib-dir="$SDK_DIR/usr" \
         --disable-memcached-sasl --enable-memcached-igbinary

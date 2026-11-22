@@ -165,6 +165,11 @@ $server = stream_socket_server("tcp://127.0.0.1:0");
 $port = (int) substr(strrchr(stream_socket_get_name($server, false), ":"), 1);
 $pid = pcntl_fork();
 
+if ($pid === -1) {
+    fwrite(STDERR, "error: the memcached server of the test did not start\n");
+    exit(1);
+}
+
 if ($pid === 0) {
     $stored = [];
     $connection = stream_socket_accept($server, 20);
@@ -198,11 +203,12 @@ if ($client->getOption(Memcached::OPT_SERIALIZER) !== Memcached::SERIALIZER_IGBI
 }
 echo "  memcached ", phpversion("memcached"), "\n";
 '
-[ "$(nm -u "$extensions/memcached.so" | grep -c -E "_memcached_|_hashkit_")" = "0" ] || { echo "error: memcached.so needs libmemcached from outside" >&2; exit 1; }
+undefined="$(nm -u "$extensions/memcached.so")"
+! echo "$undefined" | grep -E "memcached_|hashkit_" || { echo "error: memcached.so needs libmemcached from outside" >&2; exit 1; }
 
 licenses="php openssl icu libintl oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype
 libyaml openldap libpq imagemagick igbinary redis xdebug pcov apcu yaml imagick mailparse gmp gmp-gpl
-libmemcached memcached fastlz memcached-g-fmt zend zend-asm tsrm php-fpm libbcmath timelib libmagic
+libmemcached libmemcached-md5 memcached fastlz memcached-g-fmt zend zend-asm tsrm php-fpm libbcmath timelib libmagic
 libmbfl libavifinfo pcre2 libgd xxhash dynasm"
 case "$(basename "$root")" in
     php-8.2.*|php-8.3.*) ;;
