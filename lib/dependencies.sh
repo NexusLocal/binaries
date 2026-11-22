@@ -219,6 +219,25 @@ build_gettext() {
     mark_built gettext
 }
 
+# GMP has the LGPL license, so it stays a shared library that a user can replace. Without --build,
+# the result depends on the processor of the build machine.
+build_gmp() {
+    dependency_built gmp && return 0
+    log "Building gmp $(source_version gmp) (shared)"
+
+    local dir
+    dir="$(unpack gmp)"
+    (
+        cd "$dir"
+        run_logged configure.log ./configure --prefix="$STAGE_DIR" --libdir="$STAGE_DIR/lib" \
+            --build=aarch64-apple-darwin --enable-shared --disable-static
+        run_logged make.log make -j"$JOBS"
+        run_logged check.log make check -j"$JOBS"
+        run_logged install.log make install
+    )
+    mark_built gmp
+}
+
 write_system_pkgconfig() {
     local name="$1" version="$2" cflags="$3" libs="$4"
 

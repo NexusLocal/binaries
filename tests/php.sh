@@ -47,7 +47,7 @@ for file in "$extensions"/*.so; do
     flags=(-n -d "extension_dir=$extensions")
     case "$name" in
         xdebug|opcache) flags+=(-d "zend_extension=$name") ;;
-        redis) flags+=(-d "extension=igbinary" -d "extension=redis") ;;
+        redis|memcached) flags+=(-d "extension=igbinary" -d "extension=$name") ;;
         *) flags+=(-d "extension=$name") ;;
     esac
 
@@ -147,9 +147,63 @@ if ($headers["subject"] !== "Hi" || $address !== "ann@example.test") {
 echo "  mailparse ", phpversion("mailparse"), "\n";
 '
 
+echo "==> gmp calculates with large numbers"
+"$php" -n -d "extension_dir=$extensions" -d extension=gmp -r '
+$power = gmp_strval(gmp_powm("123456789012345678901234567890", "65537", "340282366920938463463374607431768211507"));
+$factorial = gmp_strval(gmp_fact(30));
+if ($power !== bcpowmod("123456789012345678901234567890", "65537", "340282366920938463463374607431768211507") || $factorial !== "265252859812191058636308480000000") {
+    fwrite(STDERR, "error: gmp gave $power and $factorial\n");
+    exit(1);
+}
+echo "  GMP ", GMP_VERSION, "\n";
+'
+otool -L "$extensions/gmp.so" | grep -q "@rpath/libgmp" || { echo "error: gmp.so does not use the shared library of GMP" >&2; exit 1; }
+
+echo "==> memcached stores a value with igbinary on a server that speaks the text protocol"
+"$php" -n -d "extension_dir=$extensions" -d extension=igbinary -d extension=memcached -r '
+$server = stream_socket_server("tcp://127.0.0.1:0");
+$port = (int) substr(strrchr(stream_socket_get_name($server, false), ":"), 1);
+$pid = pcntl_fork();
+
+if ($pid === 0) {
+    $stored = [];
+    $connection = stream_socket_accept($server, 20);
+    while (($line = fgets($connection)) !== false) {
+        $words = explode(" ", rtrim($line));
+        if ($words[0] === "set") {
+            $stored[$words[1]] = [$words[2], rtrim(stream_get_contents($connection, (int) $words[4] + 2), "\r\n")];
+            fwrite($connection, "STORED\r\n");
+        } elseif (in_array($words[0], ["get", "gets"], true)) {
+            [$flags, $data] = $stored[$words[1]] ?? ["0", ""];
+            fwrite($connection, isset($stored[$words[1]]) ? "VALUE {$words[1]} $flags " . strlen($data) . "\r\n$data\r\nEND\r\n" : "END\r\n");
+        } elseif ($words[0] === "quit") {
+            break;
+        }
+    }
+    posix_kill(posix_getpid(), SIGKILL);
+}
+
+$client = new Memcached();
+$client->addServer("127.0.0.1", $port);
+$value = ["name" => "Ann", "numbers" => [1, 2, 3]];
+$stored = $client->set("key", $value);
+$read = $client->get("key");
+$message = $client->getResultMessage();
+posix_kill($pid, SIGKILL);
+pcntl_waitpid($pid, $status);
+
+if ($client->getOption(Memcached::OPT_SERIALIZER) !== Memcached::SERIALIZER_IGBINARY || !$stored || $read !== $value) {
+    fwrite(STDERR, "error: memcached did not store and read a value: $message\n");
+    exit(1);
+}
+echo "  memcached ", phpversion("memcached"), "\n";
+'
+[ "$(nm -u "$extensions/memcached.so" | grep -c -E "_memcached_|_hashkit_")" = "0" ] || { echo "error: memcached.so needs libmemcached from outside" >&2; exit 1; }
+
 licenses="php openssl icu libintl oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype
-libyaml openldap libpq imagemagick igbinary redis xdebug pcov apcu yaml imagick mailparse zend
-zend-asm tsrm php-fpm libbcmath timelib libmagic libmbfl libavifinfo pcre2 libgd xxhash dynasm"
+libyaml openldap libpq imagemagick igbinary redis xdebug pcov apcu yaml imagick mailparse gmp gmp-gpl
+libmemcached memcached fastlz memcached-g-fmt zend zend-asm tsrm php-fpm libbcmath timelib libmagic
+libmbfl libavifinfo pcre2 libgd xxhash dynasm"
 case "$(basename "$root")" in
     php-8.2.*|php-8.3.*) ;;
     php-8.4.*) licenses="$licenses opcache-jit-ir lexbor lexbor-notice" ;;

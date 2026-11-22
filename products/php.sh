@@ -6,18 +6,20 @@ PHP_PREFIX=/var/empty/nexus/php
 # There is no libargon2. libsodium and libargon2 both export blake2b_init, blake2b_update and
 # blake2b_final, so in a static link argon2 called the libsodium versions with a smaller struct
 # and overflowed its stack. ext/sodium provides PASSWORD_ARGON2I and PASSWORD_ARGON2ID itself.
-PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml openldap postgresql-18 imagemagick"
-PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick mailparse"
+PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml gmp libmemcached openldap postgresql-18 imagemagick"
+PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick mailparse memcached"
 
 # Revision 2 added mailparse. Revision 3 added the license of each program in the package.
-# Revision 4 adds the licenses of the libraries in the source of PHP.
-PHP_REVISION=4
+# Revision 4 added the licenses of the libraries in the source of PHP. Revision 5 adds gmp and
+# memcached.
+PHP_REVISION=5
 
 # The license files of the programs in the package besides PHP and igbinary. Each line gives the
 # name in licenses/, the source in sources.lock and the file in that source. The extensions,
-# OpenSSL, ICU, libintl, libpq and the static libraries are all in the package. So their licenses
-# go with it. FreeType offers two licenses. The package uses the FreeType License (FTL). The BDF
-# and PCF drivers of FreeType have their own license in their README.
+# OpenSSL, ICU, libintl, GMP, libpq and the static libraries are all in the package. So their
+# licenses go with it. FreeType offers two licenses. The package uses the FreeType License (FTL).
+# The BDF and PCF drivers of FreeType have their own license in their README. The text of the
+# LGPL 3 of GMP adds to the text of the GPL 3. FastLZ is in the source of memcached.
 PHP_LICENSES="
 openssl openssl LICENSE.txt
 icu icu LICENSE
@@ -34,6 +36,9 @@ freetype-ftl freetype docs/FTL.TXT
 freetype-bdf freetype src/bdf/README
 freetype-pcf freetype src/pcf/README
 libyaml libyaml License
+gmp gmp COPYING.LESSERv3
+gmp-gpl gmp COPYINGv3
+libmemcached libmemcached LICENSE
 openldap openldap LICENSE
 openldap-copyright openldap COPYRIGHT
 libpq postgresql-18 COPYRIGHT
@@ -47,6 +52,8 @@ apcu-notice pecl-apcu NOTICE
 yaml pecl-yaml LICENSE
 imagick pecl-imagick LICENSE
 mailparse pecl-mailparse LICENSE
+memcached pecl-memcached LICENSE
+fastlz pecl-memcached fastlz/LICENSE
 "
 
 # igbinary 3.2.16 is the newest stable release and does not compile against PHP 8.5, which
@@ -72,6 +79,9 @@ add_php_licenses() {
 
     source_name="$(igbinary_source "$minor")"
     add_license "$package" igbinary "$WORK_DIR/$source_name-$(source_version "$source_name")/COPYING"
+
+    add_license_from_comment "$package" memcached-g-fmt \
+        "$WORK_DIR/pecl-memcached-$(source_version pecl-memcached)/g_fmt.c" "Permission to use"
 
     add_php_source_licenses "$package" "$src" "$minor"
 }
@@ -145,6 +155,9 @@ build_php_dependencies() {
         --without-harfbuzz --without-brotli --without-bzip2 --without-png --with-zlib=yes
     build_gettext
     build_autotools_dependency libyaml
+    build_gmp
+    build_cmake_dependency libmemcached \
+        -DENABLE_SASL=OFF -DENABLE_BACKTRACE=OFF -DENABLE_DTRACE=OFF -DENABLE_MEMASLAP=OFF -DBUILD_TESTING=OFF
     build_openldap
     build_libpq
     build_imagemagick
@@ -227,6 +240,7 @@ build_product() {
             --with-jpeg \
             --with-webp \
             --with-gettext="$STAGE_DIR" \
+            --with-gmp="shared,$STAGE_DIR" \
             --with-iconv="$SDK_DIR/usr" \
             --enable-intl \
             --with-ldap="$STAGE_DIR" \
@@ -260,7 +274,7 @@ build_product() {
     rm -rf "$package/php/man" "$package/etc"
     mkdir -p "$package/share" "$package/lib"
     cp "$src/php.ini-development" "$src/php.ini-production" "$package/share/"
-    for library in icuuc icui18n icuio icudata intl; do
+    for library in icuuc icui18n icuio icudata intl gmp; do
         cp -a "$STAGE_DIR/lib/lib$library".*dylib "$STAGE_DIR/lib/lib$library.dylib" "$package/lib/"
     done
 
@@ -284,6 +298,11 @@ build_product() {
     build_pecl_extension "$package" pecl-yaml --with-yaml="$STAGE_DIR"
     PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" pecl-imagick --with-imagick="$STAGE_DIR"
     build_pecl_extension "$package" pecl-mailparse
+
+    # libmemcached is C++, and its pkg-config file does not name the C++ library.
+    LDFLAGS="$LDFLAGS -lc++" build_pecl_extension "$package" pecl-memcached \
+        --with-libmemcached-dir="$STAGE_DIR" --with-zlib-dir="$SDK_DIR/usr" \
+        --disable-memcached-sasl --enable-memcached-igbinary
 
     add_php_licenses "$package" "$src" "$minor"
     write_source_file "$package" "$source_name" $PHP_LIBRARIES "$(igbinary_source "$minor")" \

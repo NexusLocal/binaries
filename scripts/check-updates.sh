@@ -116,6 +116,7 @@ report libzip "$(github_latest nih-at/libzip)"
 report libjpeg-turbo "$(github_latest libjpeg-turbo/libjpeg-turbo "")"
 report oniguruma "$(github_latest kkos/oniguruma)"
 report libyaml "$(github_latest yaml/libyaml "")"
+report libmemcached "$(github_latest awesomized/libmemcached "")"
 report imagemagick "$(github_latest ImageMagick/ImageMagick "")"
 # These sources stay in their version line. scripts/check-lines.sh reports a new line. A new major
 # version of ICU also changes the sort order of the PostgreSQL databases of the users.
@@ -135,7 +136,7 @@ report autoconf "$(listed_latest https://ftp.gnu.org/gnu/autoconf/ autoconf "$(p
 report cmake "$(github_latest Kitware/CMake)"
 report ninja "$(github_latest ninja-build/ninja)"
 report go "$(curl -fsS --max-time 30 'https://go.dev/dl/?mode=json' | jq -r '.[0].version' | sed 's/^go//')"
-for extension in xdebug pcov redis apcu yaml imagick mailparse; do report "pecl-$extension" "$(pecl_latest "$extension")"; done
+for extension in xdebug pcov redis apcu yaml imagick mailparse memcached; do report "pecl-$extension" "$(pecl_latest "$extension")"; done
 
 # The last day of security fixes in support.lock, against endoflife.date. The LTS flags are not
 # compared: endoflife.date gives a date for some of them, and the decision record sets them.

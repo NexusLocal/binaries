@@ -117,12 +117,13 @@ The owner gets an issue, and so an email, in three cases:
   FreeType, JPEG, PNG and WebP), gettext, iconv, intl, ldap, mbstring, mysqli, mysqlnd, openssl,
   pcntl, PDO, pdo_mysql, pdo_sqlite, posix, readline (libedit), session, SimpleXML, soap,
   sockets, sodium, sqlite3, tokenizer, xml, xmlreader, xmlwriter, xsl, zip and zlib.
-- **Shared, turned on in php.ini:** apcu, igbinary, imagick, mailparse, pcov, pgsql, pdo_pgsql,
-  redis (with igbinary), xdebug, yaml, and opcache for 8.2 to 8.4. In 8.5 opcache is always built in. pgsql
-  and pdo_pgsql contain a static libpq 18 with its own OpenSSL. imagick contains a static
-  ImageMagick 7 with PNG, JPEG, WebP and FreeType, built with zero configuration.
+- **Shared, turned on in php.ini:** apcu, gmp, igbinary, imagick, mailparse, memcached (with
+  igbinary, without SASL), pcov, pgsql, pdo_pgsql, redis (with igbinary), xdebug, yaml, and opcache
+  for 8.2 to 8.4. In 8.5 opcache is always built in. pgsql and pdo_pgsql contain a static libpq 18
+  with its own OpenSSL. imagick contains a static ImageMagick 7 with PNG, JPEG, WebP and FreeType,
+  built with zero configuration. memcached contains a static libmemcached.
 - **From macOS:** libxml2, libxslt, curl, sqlite, libedit, iconv, zlib and bzip2.
-- **In the package:** OpenSSL 3.5, ICU and libintl (shared), and oniguruma, libsodium, libzip,
+- **In the package:** OpenSSL 3.5, ICU, libintl and GMP (shared), and oniguruma, libsodium, libzip,
   libpng, libjpeg-turbo, libwebp, FreeType, libyaml and the OpenLDAP client (static).
 - **Paths:** the compiled-in prefix is `/var/empty/nexus/php`, a folder that only root can
   create. So a PHP that runs without `-c` cannot load a php.ini that another user put there.
