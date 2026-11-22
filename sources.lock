@@ -73,6 +73,14 @@ postgresql-17 17.12 9cf136a703d8ee2f83465c43be4e9e8e7930c82b0bfba13be7e2537be769
 postgresql-18 18.7 441dfae4280cae3e0425e5f876f80559fb0731c140f1aae22b3e5a54d0411bfd https://ftp.postgresql.org/pub/source/v18.7/postgresql-18.7.tar.bz2
 postgresql-19 19.0 a89fd70efbad6a08c7dbed8d4872e3af30170d9e5ca9dc7906523be95b4e692d https://ftp.postgresql.org/pub/source/v19.0/postgresql-19.0.tar.bz2
 pgvector 0.8.7 cac0b10c360f05b2d521200105ba3697e773d4cd3731f5a915a7e37ebe0bea85 https://github.com/pgvector/pgvector/archive/refs/tags/v0.8.7.tar.gz
+postgis 3.7.0 832bbf50f2b6f57fab053bc9676b3bfe641e5bf966cdcb28c7926f8d4b3c5e04 https://download.osgeo.org/postgis/source/postgis-3.7.0.tar.gz
+pgrouting 4.0.2 2faf31b178db969637c1f392ba3ba18fba8d5aed15bdc73fbb4a53a72c5d0f71 https://github.com/pgRouting/pgrouting/releases/download/v4.0.2/pgrouting-4.0.2.tar.gz
+geos 3.15.0 d5e5192a686d065eaed082de14dd26244c5c8e02bff16b2c6cce3265f648e00e https://download.osgeo.org/geos/geos-3.15.0.tar.bz2
+proj 9.9.0 791a0610547eeabb17006cfd49cdbd2034f3240f47ed5e88a1031811f4e2bcf3 https://github.com/OSGeo/PROJ/releases/download/9.9.0/proj-9.9.0.tar.gz
+json-c 0.19-20260627 f17a6d7d265cf840dfd8f0f46a606d98c6b5b26dc7cfe27275d1546a213086c8 https://github.com/json-c/json-c/archive/refs/tags/json-c-0.19-20260627.tar.gz
+protobuf-c 1.5.2 e2c86271873a79c92b58fef7ebf8de1aa0df4738347a8bd5d4e65a80a16d0d24 https://github.com/protobuf-c/protobuf-c/releases/download/v1.5.2/protobuf-c-1.5.2.tar.gz
+protobuf 21.12 4eab9b524aa5913c6fffb20b2a8abf5ef7f95a80bc0701f3a6dbb4c607f73460 https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-cpp-3.21.12.tar.gz
+boost 1.92.0 ea7b982002cc9dfbe59b0b217b206f470dc75f3de0bb2973d844118934d82411 https://github.com/boostorg/boost/releases/download/boost-1.92.0/boost-1.92.0-b2-nodocs.tar.xz
 node-22 22.23.5 d0c68c321161bb2c6483efea9a343010dea8e5e7f60d73c6a7eba140016d662f https://nodejs.org/dist/v22.23.5/node-v22.23.5-darwin-arm64.tar.xz
 node-24 24.22.3 1d64136c8a43d648d1b3bad10797a4c995b1ca032d2bde8799de43b37f058fe5 https://nodejs.org/dist/v24.22.3/node-v24.22.3-darwin-arm64.tar.xz
 node-26 26.13.1 af6202f5370a3a5209e85dc543758dfd9f44c8726626a236730cd603a67a8559 https://nodejs.org/dist/v26.13.1/node-v26.13.1-darwin-arm64.tar.xz

@@ -7,8 +7,38 @@
 
 COMPILED_PREFIX=/var/empty/nexus/postgresql
 
-# Revision 2 adds pgvector and the licenses of the code of other authors.
-POSTGRESQL_REVISION=2
+# Revision 2 added pgvector and the licenses of the code of other authors. Revision 3 adds PostGIS
+# and pgRouting.
+POSTGRESQL_REVISION=3
+
+# The libraries of PostGIS that the package has as shared libraries: GEOS and GMP have the LGPL
+# license, and more than one file uses GEOS and PROJ.
+POSTGIS_SHARED_LIBRARIES="geos geos_c proj gmp"
+POSTGIS_LIBRARIES="geos proj gmp json-c protobuf-c"
+
+# The license files of PostGIS, pgRouting and their libraries. Each line gives the name in licenses/,
+# the source in sources.lock and the file in that source. The text of the LGPL 3 of GMP adds to the
+# text of the GPL 3. PostGIS has ryu, uthash, FlatBuffers and wagyu in its source.
+POSTGIS_LICENSES="
+postgis postgis COPYING
+postgis-notice postgis LICENSE.TXT
+postgis-ryu postgis deps/ryu/LICENSE
+postgis-ryu-apache postgis deps/ryu/LICENSE-Apache2
+postgis-ryu-boost postgis deps/ryu/LICENSE-Boost
+postgis-uthash postgis deps/uthash/LICENSE
+postgis-flatbuffers postgis deps/flatgeobuf/include/flatbuffers/LICENSE
+postgis-wagyu postgis deps/wagyu/LICENSE.wagyu
+postgis-wagyu-geometry postgis deps/wagyu/LICENSE.geometry
+pgrouting pgrouting LICENSE
+pgrouting-boost pgrouting BOOST_LICENSE_1_0.txt
+boost boost LICENSE_1_0.txt
+geos geos COPYING
+proj proj COPYING
+gmp gmp COPYING.LESSERv3
+gmp-gpl gmp COPYINGv3
+json-c json-c COPYING
+protobuf-c protobuf-c LICENSE
+"
 
 postgresql_source() {
     case "$1" in
@@ -22,7 +52,7 @@ postgresql_source() {
 postgresql_extensions() {
     case "$1" in
         14) ;;
-        *) echo pgvector ;;
+        *) echo "pgvector postgis pgrouting" ;;
     esac
 }
 
@@ -57,8 +87,90 @@ build_pgvector() {
     )
 }
 
+build_postgis_dependencies() {
+    build_gmp
+    build_geos
+    build_proj
+    build_cmake_dependency json-c -DBUILD_APPS=OFF -DBUILD_TESTING=OFF -DDISABLE_WERROR=ON -DDISABLE_EXTRA_LIBS=ON
+    build_protobuf_c
+}
+
+# Without raster (it needs GDAL), SFCGAL and the tools with a window. Topology and the vector tiles
+# are part of it. protoc-c comes from protobuf-c. The folders of the extensions use a MKDIR_P with a
+# path that does not exist there. mandir keeps the manual pages out of /usr/local.
+build_postgis() {
+    local pg_config="$1" src
+
+    build_postgis_dependencies
+    src="$(unpack postgis)"
+
+    log "Building PostGIS $(source_version postgis)"
+    (
+        cd "$src"
+        export PATH="$STAGE_DIR/bin:$PATH"
+        run_logged configure.log ./configure \
+            --with-pgconfig="$pg_config" \
+            --with-geosconfig="$STAGE_DIR/bin/geos-config" \
+            --with-projdir="$STAGE_DIR" \
+            --with-jsondir="$STAGE_DIR" \
+            --with-protobufdir="$STAGE_DIR" \
+            --without-raster --without-gui --without-gettext --without-interrupt-tests \
+            --without-phony-revision
+        run_logged make.log make -j"$JOBS"
+        run_logged install.log make install mandir="$src/nexus-man" MKDIR_P="mkdir -p"
+    )
+}
+
+# Only the headers of Boost. From PostgreSQL 16 on, a module of PostgreSQL has the suffix .dylib.
+# Earlier it has .so.
+build_pgrouting() {
+    local pg_config="$1" line="$2" src suffix=".so"
+
+    [ "$line" -lt 16 ] || suffix=".dylib"
+    ensure_cmake
+    ensure_ninja
+    unpack boost > /dev/null
+    src="$(unpack pgrouting)"
+
+    log "Building pgRouting $(source_version pgrouting)"
+    (
+        cd "$src"
+        run_logged configure.log cmake -S . -B nexus-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_IGNORE_PREFIX_PATH="/opt/homebrew;/usr/local;/Applications/MAMP/Library" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOS_MIN" \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_SHARED_MODULE_SUFFIX_CXX="$suffix" \
+            -DBOOST_ROOT="$WORK_DIR/boost-$(source_version boost)" \
+            -DBoost_INCLUDE_DIR="$WORK_DIR/boost-$(source_version boost)" \
+            -DPOSTGRESQL_PG_CONFIG="$pg_config" \
+            -DWITH_DOC=OFF -DWITH_ALL_DOC=OFF
+        run_logged build.log cmake --build nexus-build
+        run_logged install.log cmake --install nexus-build
+    )
+}
+
+add_postgis_licenses() {
+    local package="$1" name source_name file
+
+    while read -r name source_name file; do
+        [ -n "$name" ] || continue
+        add_license "$package" "$name" "$WORK_DIR/$source_name-$(source_version "$source_name")/$file"
+    done <<< "$POSTGIS_LICENSES"
+
+    for name in "postgis liblwgeom postgis topology libpgcommon loader deps" "geos src include capi" "proj src include"; do
+        set -- $name
+        source_name="$1"
+        shift
+        (
+            cd "$WORK_DIR/$source_name-$(source_version "$source_name")"
+            find "$@" -type f \( -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' \)
+        ) | add_source_notices "$package" "$source_name-source-notices" "$WORK_DIR/$source_name-$(source_version "$source_name")"
+    done
+}
+
 build_product() {
-    local source_name version src install package library extension extensions
+    local source_name version src install package library extension extensions license="PostgreSQL"
 
     source_name="$(postgresql_source "${1:-}")"
     version="$(source_version "$source_name")"
@@ -99,7 +211,7 @@ build_product() {
     )
 
     for extension in $extensions; do
-        "build_$extension" "$install$COMPILED_PREFIX/bin/pg_config"
+        "build_$extension" "$install$COMPILED_PREFIX/bin/pg_config" "$1"
     done
 
     package="$(new_package_dir postgresql "$version")"
@@ -115,10 +227,18 @@ build_product() {
     add_postgresql_licenses "$package" "$src"
     add_license "$package" openssl "$WORK_DIR/openssl-$(source_version openssl)/LICENSE.txt"
     add_license "$package" icu "$WORK_DIR/icu-$(source_version icu)/LICENSE"
-    for extension in $extensions; do
-        add_license "$package" "$extension" "$WORK_DIR/$extension-$(source_version "$extension")/LICENSE"
-    done
-    write_source_file "$package" "$source_name" openssl icu $extensions
 
-    PACKAGE_LINE="$1" PACKAGE_REVISION="$POSTGRESQL_REVISION" archive_package postgresql "$version" "PostgreSQL"
+    if [ -n "$extensions" ]; then
+        for library in $POSTGIS_SHARED_LIBRARIES; do
+            cp -a "$STAGE_DIR/lib/lib$library".*dylib "$STAGE_DIR/lib/lib$library.dylib" "$package/lib/"
+        done
+        add_license "$package" pgvector "$WORK_DIR/pgvector-$(source_version pgvector)/LICENSE"
+        add_postgis_licenses "$package"
+        license="PostgreSQL AND GPL-2.0-or-later"
+        write_source_file "$package" "$source_name" openssl icu $extensions $POSTGIS_LIBRARIES boost
+    else
+        write_source_file "$package" "$source_name" openssl icu
+    fi
+
+    PACKAGE_LINE="$1" PACKAGE_REVISION="$POSTGRESQL_REVISION" archive_package postgresql "$version" "$license"
 }

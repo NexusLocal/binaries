@@ -27,11 +27,21 @@ build_autotools_dependency() {
 }
 
 build_cmake_dependency() {
-    local name="$1" dir
-    shift
+    build_cmake_library static OFF "$@"
+}
+
+# The library gets an absolute install name. So the test programs of a configure script run, and
+# relocate_package finds the library.
+build_shared_cmake_dependency() {
+    build_cmake_library shared ON "$@" -DCMAKE_INSTALL_NAME_DIR="$STAGE_DIR/lib"
+}
+
+build_cmake_library() {
+    local kind="$1" shared="$2" name="$3" dir
+    shift 3
 
     dependency_built "$name" && return 0
-    log "Building $name $(source_version "$name") (static)"
+    log "Building $name $(source_version "$name") ($kind)"
 
     ensure_cmake
     ensure_ninja
@@ -48,7 +58,7 @@ build_cmake_dependency() {
             -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOS_MIN" \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_SHARED_LIBS="$shared" \
             "$@"
         run_logged build.log cmake --build nexus-build
         run_logged install.log cmake --install nexus-build
@@ -236,6 +246,44 @@ build_gmp() {
         run_logged install.log make install
     )
     mark_built gmp
+}
+
+# GEOS has the LGPL license. So it stays a shared library that a user can replace.
+build_geos() {
+    build_shared_cmake_dependency geos -DBUILD_TESTING=OFF -DBUILD_GEOSOP=OFF -DGEOS_BUILD_DEVELOPER=OFF
+}
+
+# PROJ has its database in the library. So it works in each folder, and no setting of the user can
+# give it another database. Without TIFF it cannot use grid files.
+build_proj() {
+    build_shared_cmake_dependency proj -DENABLE_TIFF=OFF -DENABLE_CURL=OFF -DBUILD_APPS=OFF -DBUILD_TESTING=OFF \
+        -DEMBED_RESOURCE_FILES=ON -DUSE_ONLY_EMBEDDED_RESOURCE_FILES=ON -DEMBED_PROJ_DATA_PATH=OFF
+}
+
+# protobuf-c makes protoc-c, which only PostGIS needs at build time. It needs the C++ library of
+# protobuf. Version 21 is the last one without Abseil. Both stay in the tools folder.
+build_protobuf_c() {
+    dependency_built protobuf-c && return 0
+    log "Building protobuf $(source_version protobuf) and protobuf-c $(source_version protobuf-c)"
+
+    local dir prefix="$TOOLS_DIR/protobuf"
+    dir="$(unpack protobuf)"
+    (
+        cd "$dir"
+        run_logged configure.log ./configure --prefix="$prefix" --libdir="$prefix/lib" --disable-shared --enable-static
+        run_logged make.log make -j"$JOBS"
+        run_logged install.log make install
+    )
+
+    dir="$(unpack protobuf-c)"
+    (
+        cd "$dir"
+        export PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig:$PKG_CONFIG_LIBDIR"
+        run_logged configure.log ./configure --prefix="$STAGE_DIR" --libdir="$STAGE_DIR/lib" --disable-shared --enable-static
+        run_logged make.log make -j"$JOBS"
+        run_logged install.log make install
+    )
+    mark_built protobuf-c
 }
 
 write_system_pkgconfig() {

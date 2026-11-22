@@ -43,8 +43,10 @@ extensions=""
 case "$(basename "$root")" in
     postgresql-14.*) ;;
     *)
-        extensions="vector"
-        licenses="$licenses pgvector"
+        extensions="vector postgis postgis_topology pgrouting"
+        licenses="$licenses pgvector postgis postgis-notice postgis-ryu postgis-ryu-apache postgis-ryu-boost
+        postgis-uthash postgis-flatbuffers postgis-wagyu postgis-wagyu-geometry postgis-source-notices pgrouting
+        pgrouting-boost boost geos geos-source-notices proj proj-source-notices gmp gmp-gpl json-c protobuf-c"
         ;;
 esac
 
@@ -64,7 +66,38 @@ test_vector() {
     test_vector_index "$1" half embeddings_ivfflat
 }
 
+# The tower of Amersfoort is the point 155000, 463000 of the Dutch grid (EPSG 28992). PROJ has no grid
+# files. So the formula gives the point with an error of some meters.
+test_spatial() {
+    local database="$1" distance
+
+    distance="$("${psql[@]}" -At -d "$database" -c "select round(st_distance(st_transform(place, 28992), st_setsrid(st_point(155000, 463000), 28992))) from towns where name = 'Amersfoort'")"
+    [ -n "$distance" ] && [ "${distance%.*}" -le 5 ] \
+        || { echo "error: the point in the Dutch grid is $distance meters away in $database" >&2; exit 1; }
+
+    [ "$("${psql[@]}" -At -d "$database" -c "select name from towns order by place <-> st_setsrid(st_point(4.9, 52.37), 4326) limit 1")" = "Amsterdam" ] \
+        || { echo "error: PostGIS did not find the nearest town in $database" >&2; exit 1; }
+
+    [ "$("${psql[@]}" -At -d "$database" -c "select st_x(st_geomfromgeojson('{\"type\":\"Point\",\"coordinates\":[5,52]}'))")" = "5" ] \
+        || { echo "error: PostGIS did not read GeoJSON in $database" >&2; exit 1; }
+
+    [ "$("${psql[@]}" -At -d "$database" -c "select length(st_asmvt(tile, 'towns')) > 0 from (select name, st_asmvtgeom(st_transform(place, 3857), st_tileenvelope(0, 0, 0)) as geom from towns) tile")" = "t" ] \
+        || { echo "error: PostGIS made no vector tile in $database" >&2; exit 1; }
+
+    [ "$("${psql[@]}" -At -d "$database" -c "select string_agg(node::text, ',' order by seq) from pgr_dijkstra('select id, source, target, cost from roads', 1, 4)")" = "1,2,4" ] \
+        || { echo "error: pgRouting did not find the shortest route in $database" >&2; exit 1; }
+}
+
 if [ -n "$extensions" ]; then
+    "${psql[@]}" -d nexus_test -c "create extension postgis; create extension postgis_topology; create extension pgrouting;
+    create table towns (name text, place geometry(Point, 4326));
+    insert into towns values ('Amersfoort', st_setsrid(st_point(5.38720621, 52.15517440), 4326)), ('Amsterdam', st_setsrid(st_point(4.9, 52.37), 4326));
+    create index towns_place on towns using gist (place);
+    create table roads (id int, source int, target int, cost float);
+    insert into roads values (1, 1, 2, 1), (2, 2, 4, 1), (3, 1, 3, 1), (4, 3, 4, 5);"
+    test_spatial nexus_test
+    echo "==> $("${psql[@]}" -At -d nexus_test -c "select 'PostGIS ' || postgis_lib_version() || ' and pgRouting ' || pgr_version()") work"
+
     "${psql[@]}" -d nexus_test -c "create extension vector;
     create table embeddings (id int primary key, value vector(3), half halfvec(3));
     insert into embeddings values (1, '[1,2,3]', '[1,2,3]'), (2, '[3,1,2]', '[3,1,2]'), (3, '[9,9,9]', '[9,9,9]');
@@ -80,7 +113,10 @@ echo "==> dump and restore a database"
 "$root/bin/pg_restore" -h 127.0.0.1 -p "$port" -U postgres -d nexus_copy "$base/dump.pgdump"
 [ "$("${psql[@]}" -At -d nexus_copy -c "select count(*) from items")" = "2" ] \
     || { echo "error: the restored copy differs" >&2; exit 1; }
-[ -z "$extensions" ] || test_vector nexus_copy
+if [ -n "$extensions" ]; then
+    test_vector nexus_copy
+    test_spatial nexus_copy
+fi
 
 echo "==> copy a database with a template"
 "${psql[@]}" -c "create database nexus_template_copy template nexus_copy"

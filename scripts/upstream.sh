@@ -42,12 +42,12 @@ github_latest_tag() {
 # For a project with many tags. The start of the tag gives the version line, for example v1.6. or
 # release-79. The third argument is the part before the version.
 github_line_tag() {
-    github_api "repos/$1/git/matching-refs/tags/$2" | jq -r '.[].ref' | sed -nE "s#^refs/tags/${3:-v}([0-9]+(\.[0-9]+)+)\$#\1#p" | sort -V | tail -1
+    github_api "repos/$1/git/matching-refs/tags/$2" | jq -r '.[].ref' | sed -nE "s#^refs/tags/${3-v}([0-9]+(\.[0-9]+)+)\$#\1#p" | sort -V | tail -1
 }
 
 # The newest version in the list of files of a download folder. With a line such as 2.6, only the
 # versions of that line count.
 listed_latest() {
-    curl -fsSL --max-time 30 "$1" | grep -oE "$2-[0-9]+(\.[0-9]+)+\.(tar\.(xz|bz2)|tgz)" | sed -E "s/^$2-//; s/\.(tar\.(xz|bz2)|tgz)$//" |
+    curl -fsSL --max-time 30 "$1" | grep -oE "$2-[0-9]+(\.[0-9]+)+\.(tar\.(xz|bz2|gz)|tgz)" | sed -E "s/^$2-//; s/\.(tar\.(xz|bz2|gz)|tgz)$//" |
         awk -v line="${3:-}" 'line == "" || index($0, line ".") == 1' | sort -V | tail -1
 }
