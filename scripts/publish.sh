@@ -203,7 +203,7 @@ stop_old_build() {
         exit 1
     fi
 
-    if grep -qE '^(build\.sh|packages\.json|sources\.lock|\.github/workflows/build\.yml|(lib|licenses|products|tests)/.+)$' <<< "$changes"; then
+    if grep -qE '^(build\.sh|packages\.json|scripts/plan-build\.sh|sources\.lock|\.github/workflows/build\.yml|(lib|licenses|products|tests)/.+)$' <<< "$changes"; then
         echo "error: main has a newer commit that starts a Build. This run of $commit publishes nothing." >&2
         exit 1
     fi
@@ -236,6 +236,14 @@ add_upstream_entry node-26 node 26 tar.xz
 add_upstream_entry composer composer 2 phar
 add_upstream_entry wp-cli wp-cli 2 phar
 
+# The lines of packages.json that the manifest of this run does not have.
+missing_lines() {
+    jq -rs --slurpfile packages "$root/packages.json" '
+        . as $entries
+        | [$packages[0][] | select(. as $package | $entries | any(.name == $package.product and ($package.version == "" or .line == $package.version)) | not) | .name]
+        | join(" ")' "$entries"
+}
+
 # A build that failed gives no package. That line keeps the package of the newest manifest, so a
 # problem of one package does not hold back the updates of the others. Only a line of
 # support.lock stays, so a line that Nexus no longer offers goes away.
@@ -246,6 +254,14 @@ keep_previous_entries() {
     "$root/scripts/release-manifest.sh" download "$previous" > /dev/null || status=$?
 
     if [ "$status" -eq 3 ] && [ -z "$failed" ]; then
+        # A Build makes only some packages. Without an earlier manifest, each other line would go away.
+        missing="$(missing_lines)"
+
+        if [ -n "$missing" ]; then
+            echo "error: no earlier manifest has these lines, and this run has no package of them: $missing. No manifest is published." >&2
+            exit 1
+        fi
+
         echo "==> no earlier manifest, so no package is kept"
         return
     fi

@@ -18,10 +18,13 @@ on:
       - products/**
       - tests/**
       - sources.lock
+      - scripts/plan-build.sh
       - .github/workflows/build.yml
 
+# A newer run stops an older run. A run with the choice all has a group of its own. So a push or the
+# daily Updates run does not stop it.
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-${{ github.ref }}-${{ inputs.packages == 'all' && 'all' || 'changed' }}
   cancel-in-progress: true
 
 permissions:
@@ -51,7 +54,13 @@ jobs:
         run: |
           base="all"
           if [ "$CHOICE" != "all" ]; then
-            base="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // "all"')"
+            for attempt in 1 2 3; do
+              if base="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // "all"')"; then
+                break
+              fi
+              base="all"
+              sleep 20
+            done
           fi
           echo "base: $base"
           scripts/plan-build.sh "$base" > "$RUNNER_TEMP/packages.json"
