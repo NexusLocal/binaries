@@ -38,6 +38,7 @@ pecl-apcu 5.1.28 ca9c1820810a168786f8048a4c3f8c9e3fd941407ad1553259fb2e30b5f057b
 pecl-yaml 2.3.0 bc8404807a3a4dc896b310af21a7f8063aa238424ff77f27eb6ffa88b5874b8a https://pecl.php.net/get/yaml-2.3.0.tgz
 pecl-mailparse 3.2.0 cc5111ae17bfa36efcc5ef23dcf75b6501593ac264c196aad3e39cd4ad765332 https://pecl.php.net/get/mailparse-3.2.0.tgz
 pecl-memcached 3.4.0 c163434eb0da97c8f45c7ad41d979d381f8b81c49402b1b90b063987fb37972e https://pecl.php.net/get/memcached-3.4.0.tgz
+pecl-mongodb 2.5.8 64bcb151b4c5c3f17dc1dfd949a35aed2c10b6230332861a5ad7aa9cdff44b2a https://pecl.php.net/get/mongodb-2.5.8.tgz
 composer 2.11.2 dd158c0afd41d15fac89e1b4e47b5d42911fe316c3687cd5edac98319b25d028 https://getcomposer.org/download/2.11.2/composer.phar
 wp-cli 2.12.0 ce34ddd838f7351d6759068d09793f26755463b4a4610a5a5c0a97b68220d85c https://github.com/wp-cli/wp-cli/releases/download/v2.12.0/wp-cli-2.12.0.phar
 wordpress 7.1.5 cd44160a3fcce179fe170331132fcfc05e84e2f9284e2aad38df2aea6edaeab1 https://downloads.wordpress.org/release/wordpress-7.1.5.zip

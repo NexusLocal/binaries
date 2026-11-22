@@ -124,10 +124,11 @@ The owner gets an issue, and so an email, in three cases:
   pcntl, PDO, pdo_mysql, pdo_sqlite, posix, readline (libedit), session, SimpleXML, soap,
   sockets, sodium, sqlite3, tokenizer, xml, xmlreader, xmlwriter, xsl, zip and zlib.
 - **Shared, turned on in php.ini:** apcu, gmp, igbinary, imagick, mailparse, memcached (with
-  igbinary, without SASL), pcov, pgsql, pdo_pgsql, redis (with igbinary), xdebug, yaml, and opcache
-  for 8.2 to 8.4. In 8.5 opcache is always built in. pgsql and pdo_pgsql contain a static libpq 18
-  with its own OpenSSL. imagick contains a static ImageMagick 7 with PNG, JPEG, WebP and FreeType,
-  built with zero configuration. memcached contains a static libmemcached.
+  igbinary, without SASL), mongodb (with OpenSSL and zlib, without client-side encryption), pcov,
+  pgsql, pdo_pgsql, redis (with igbinary), xdebug, yaml, and opcache for 8.2 to 8.4. In 8.5 opcache
+  is always built in. pgsql and pdo_pgsql contain a static libpq 18 with its own OpenSSL. imagick
+  contains a static ImageMagick 7 with PNG, JPEG, WebP and FreeType, built with zero configuration.
+  memcached contains a static libmemcached. mongodb contains libmongoc from its own source.
 - **From macOS:** libxml2, libxslt, curl, sqlite, libedit, iconv, zlib and bzip2.
 - **In the package:** OpenSSL 3.5, ICU, libintl and GMP (shared), and oniguruma, libsodium, libzip,
   libpng, libjpeg-turbo, libwebp, FreeType, libyaml and the OpenLDAP client (static).

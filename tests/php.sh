@@ -206,10 +206,87 @@ echo "  memcached ", phpversion("memcached"), "\n";
 undefined="$(nm -u "$extensions/memcached.so")"
 ! echo "$undefined" | grep -E "memcached_|hashkit_" || { echo "error: memcached.so needs libmemcached from outside" >&2; exit 1; }
 
+echo "==> mongodb has TLS, zlib and SRV records, and no client-side encryption"
+"$php" -n -d "extension_dir=$extensions" -d extension=mongodb --ri mongodb > "$base/mongodb.txt"
+for line in "libmongoc SSL => enabled" "libmongoc SSL library => OpenSSL" "libmongoc crypto => enabled" \
+    "libmongoc SRV => enabled" "libmongoc compression => enabled" "libmongoc compression zlib => enabled" \
+    "libmongoc SASL => disabled" "libmongocrypt => disabled"; do
+    grep -qxF "$line" "$base/mongodb.txt" || { cat "$base/mongodb.txt"; echo "error: mongodb does not have: $line" >&2; exit 1; }
+done
+
+echo "==> mongodb sends a command to a server that speaks its protocol"
+"$php" -n -d "extension_dir=$extensions" -d extension=mongodb -r '
+use MongoDB\BSON\Document;
+use MongoDB\Driver\Command;
+use MongoDB\Driver\Manager;
+
+$server = stream_socket_server("tcp://127.0.0.1:0");
+$port = (int) substr(strrchr(stream_socket_get_name($server, false), ":"), 1);
+$pid = pcntl_fork();
+
+if ($pid === -1) {
+    fwrite(STDERR, "error: the mongodb server of the test did not start\n");
+    exit(1);
+}
+
+if ($pid === 0) {
+    $read = function ($connection, int $length): string {
+        $data = "";
+        while (strlen($data) < $length && ($part = fread($connection, $length - strlen($data))) !== false && $part !== "") {
+            $data .= $part;
+        }
+        return $data;
+    };
+    $clients = [];
+    while (true) {
+        $ready = [$server, ...$clients];
+        $none = null;
+        stream_select($ready, $none, $none, 20);
+        foreach ($ready as $connection) {
+            if ($connection === $server) {
+                $clients[] = stream_socket_accept($server, 20);
+                continue;
+            }
+            $header = $read($connection, 16);
+            if (strlen($header) < 16) {
+                unset($clients[array_search($connection, $clients, true)]);
+                continue;
+            }
+            ["length" => $length, "id" => $id, "opcode" => $opcode] = unpack("Vlength/Vid/Vto/Vopcode", $header);
+            $body = $read($connection, $length - 16);
+            $hello = ["ok" => 1.0, "isWritablePrimary" => true, "ismaster" => true, "minWireVersion" => 0, "maxWireVersion" => 25, "maxBsonObjectSize" => 16777216, "maxMessageSizeBytes" => 48000000, "maxWriteBatchSize" => 100000];
+            $isPing = $opcode === 2013 && array_key_first((array) Document::fromBSON(substr($body, 5))->toPHP(["root" => "array"])) === "ping";
+            $answer = (string) Document::fromPHP($isPing ? ["ok" => 1.0, "answer" => "pong"] : $hello);
+            $message = $opcode === 2013 ? pack("V", 0) . "\0" . $answer : pack("VPVV", 8, 0, 0, 1) . $answer;
+            fwrite($connection, pack("VVVV", 16 + strlen($message), 1, $id, $opcode === 2013 ? 2013 : 1) . $message);
+        }
+    }
+}
+
+try {
+    $manager = new Manager("mongodb://127.0.0.1:$port/?serverSelectionTimeoutMS=10000");
+    $answer = $manager->executeCommand("admin", new Command(["ping" => 1]))->toArray()[0]->answer ?? "nothing";
+} catch (Throwable $exception) {
+    $answer = $exception->getMessage();
+}
+posix_kill($pid, SIGKILL);
+pcntl_waitpid($pid, $status);
+
+$bson = Document::fromJSON("{\"name\": \"Ann\", \"id\": {\"\$oid\": \"5f5f5f5f5f5f5f5f5f5f5f5f\"}}");
+if ($answer !== "pong" || $bson->get("name") !== "Ann" || (string) $bson->get("id") !== "5f5f5f5f5f5f5f5f5f5f5f5f") {
+    fwrite(STDERR, "error: mongodb gave the answer $answer\n");
+    exit(1);
+}
+echo "  mongodb ", phpversion("mongodb"), "\n";
+'
+undefined="$(nm -u "$extensions/mongodb.so")"
+! echo "$undefined" | grep -E "_(mongoc|bson|SSL|EVP|utf8proc)_" || { echo "error: mongodb.so needs a library from outside" >&2; exit 1; }
+! otool -L "$extensions/mongodb.so" | tail -n +2 | grep -E "ssl|crypto|snappy|zstd|sasl" || { echo "error: mongodb.so links a library that the package does not have" >&2; exit 1; }
+
 licenses="php openssl icu libintl oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype
 libyaml openldap libpq imagemagick igbinary redis xdebug pcov apcu yaml imagick mailparse gmp gmp-gpl
 libmemcached libmemcached-md5 memcached fastlz memcached-g-fmt zend zend-asm tsrm php-fpm libbcmath timelib libmagic
-libmbfl libavifinfo pcre2 libgd xxhash dynasm"
+libmbfl libavifinfo pcre2 libgd xxhash dynasm mongodb mongodb-third-party mongodb-source-notices jsonsl"
 case "$(basename "$root")" in
     php-8.2.*|php-8.3.*) ;;
     php-8.4.*) licenses="$licenses opcache-jit-ir lexbor lexbor-notice" ;;

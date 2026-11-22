@@ -142,7 +142,7 @@ report autoconf "$(listed_latest https://ftp.gnu.org/gnu/autoconf/ autoconf "$(p
 report cmake "$(github_latest Kitware/CMake)"
 report ninja "$(github_latest ninja-build/ninja)"
 report go "$(curl -fsS --max-time 30 'https://go.dev/dl/?mode=json' | jq -r '.[0].version' | sed 's/^go//')"
-for extension in xdebug pcov redis apcu yaml imagick mailparse memcached; do report "pecl-$extension" "$(pecl_latest "$extension")"; done
+for extension in xdebug pcov redis apcu yaml imagick mailparse memcached mongodb; do report "pecl-$extension" "$(pecl_latest "$extension")"; done
 
 # The last day of security fixes in support.lock, against endoflife.date. The LTS flags are not
 # compared: endoflife.date gives a date for some of them, and the decision record sets them.

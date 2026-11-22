@@ -7,19 +7,20 @@ PHP_PREFIX=/var/empty/nexus/php
 # blake2b_final, so in a static link argon2 called the libsodium versions with a smaller struct
 # and overflowed its stack. ext/sodium provides PASSWORD_ARGON2I and PASSWORD_ARGON2ID itself.
 PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml gmp libmemcached openldap postgresql-18 imagemagick"
-PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick mailparse memcached"
+PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick mailparse memcached mongodb"
 
 # Revision 2 added mailparse. Revision 3 added the license of each program in the package.
 # Revision 4 added the licenses of the libraries in the source of PHP. Revision 5 adds gmp and
-# memcached.
-PHP_REVISION=5
+# memcached. Revision 6 adds mongodb.
+PHP_REVISION=6
 
 # The license files of the programs in the package besides PHP and igbinary. Each line gives the
 # name in licenses/, the source in sources.lock and the file in that source. The extensions,
 # OpenSSL, ICU, libintl, GMP, libpq and the static libraries are all in the package. So their
 # licenses go with it. FreeType offers two licenses. The package uses the FreeType License (FTL).
 # The BDF and PCF drivers of FreeType have their own license in their README. The text of the
-# LGPL 3 of GMP adds to the text of the GPL 3. FastLZ is in the source of memcached.
+# LGPL 3 of GMP adds to the text of the GPL 3. FastLZ is in the source of memcached. The LICENSE of
+# mongodb is also that of libbson, libmongoc and kms-message in its source.
 PHP_LICENSES="
 openssl openssl LICENSE.txt
 icu icu LICENSE
@@ -54,6 +55,8 @@ imagick pecl-imagick LICENSE
 mailparse pecl-mailparse LICENSE
 memcached pecl-memcached LICENSE
 fastlz pecl-memcached fastlz/LICENSE
+mongodb pecl-mongodb LICENSE
+mongodb-third-party pecl-mongodb THIRD_PARTY_NOTICES
 "
 
 # igbinary 3.2.16 is the newest stable release and does not compile against PHP 8.5, which
@@ -86,7 +89,25 @@ add_php_licenses() {
     add_license_from_comment "$package" memcached-g-fmt \
         "$WORK_DIR/pecl-memcached-$(source_version pecl-memcached)/g_fmt.c" "Permission to use"
 
+    add_mongodb_notices "$package"
     add_php_source_licenses "$package" "$src" "$minor"
+}
+
+# libbson and libmongoc have code of other authors, such as utf8proc and uthash, with its license
+# only in a comment. The source of jsonsl names a LICENSE file that is not in this source. So that
+# text comes from the project of jsonsl. The libraries zlib and libmongocrypt of this source are not
+# built, and the files for Windows are empty on macOS.
+add_mongodb_notices() {
+    local package="$1" src
+    src="$WORK_DIR/pecl-mongodb-$(source_version pecl-mongodb)"
+
+    add_license "$package" jsonsl "$NEXUS_REPO/licenses/jsonsl.txt"
+
+    (
+        cd "$src"
+        find . -type f \( -name '*.c' -o -name '*.h' \) | sed 's|^\./||' |
+            grep -v -E '^(tests|src/libmongocrypt[^/]*|src/libmongoc/src/zlib-[^/]*)/|(secure-channel|cng|sspi|windows)'
+    ) | add_source_notices "$package" mongodb-source-notices "$src"
 }
 
 # The libraries in the source of PHP that the package contains. PCRE2, libgd and xxHash have their
@@ -306,6 +327,10 @@ build_product() {
     LDFLAGS="$LDFLAGS -lc++" build_pecl_extension "$package" pecl-memcached \
         --with-libmemcached-dir="$STAGE_DIR" --with-zlib-dir="$SDK_DIR/usr" \
         --disable-memcached-sasl --enable-memcached-igbinary
+
+    PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" pecl-mongodb \
+        --with-mongodb-ssl=openssl --with-mongodb-zlib=system --with-mongodb-utf8proc=bundled \
+        --with-mongodb-client-side-encryption=no --with-mongodb-sasl=no --with-mongodb-snappy=no --with-mongodb-zstd=no
 
     add_php_licenses "$package" "$src" "$minor"
     write_source_file "$package" "$source_name" $PHP_LIBRARIES "$(igbinary_source "$minor")" \
