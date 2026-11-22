@@ -63,8 +63,9 @@ GitHub tags and commits. The script downloads such a source twice. Both download
 A package with a source archive of its own (MySQL, Mailpit and cloudflared) gets both in one update.
 fmt gets the version that the newest MariaDB releases name in `cmake/libfmt.cmake`, in the same
 update as MariaDB. ICU, libpng, OpenLDAP, APR and some other libraries stay in their version line of
-`sources.lock`, for example OpenLDAP 2.6. ngx_brotli has no releases. So it gets the newest commit. Then the
-workflow commits, pushes and starts the build. No person is needed for an update in a version line.
+`sources.lock`, for example OpenLDAP 2.6. ngx_brotli has no releases. So it gets the newest commit.
+GMP changes rarely. So a person updates it. Then the workflow commits, pushes and starts the build.
+No person is needed for another update in a version line.
 
 The owner gets an issue, and so an email, in three cases:
 
