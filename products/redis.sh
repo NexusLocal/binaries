@@ -46,9 +46,7 @@ add_redis_licenses() {
     add_redis_source_notices "$package" "$src"
 }
 
-# Redis has code of other authors in its own files, for example LZF and SipHash. Their licenses are
-# only in comments. redis-source-notices.txt has each different notice one time, after the name of
-# its file.
+# Redis has code of other authors in its own files, for example LZF and SipHash.
 add_redis_source_notices() {
     local package="$1" src="$2" folders="src" dependency
 
@@ -64,20 +62,8 @@ add_redis_source_notices() {
         cd "$src"
         find $folders -name '*.[ch]' -type f -not -path 'src/modules/*' -not -path '*/adapters/*' \
             -not -path '*/examples/*' -not -path '*/fuzzing/*' -not -path '*/test*' \
-            -not -name ssl.c -not -name hiredis_ssl.h | LC_ALL=C sort | LC_ALL=C xargs awk '
-            function check(comment, file) {
-                if (comment ~ /Redistribution and use|Permission is hereby granted|Permission to use, copy|provided .as-is|presented "as is"|To the extent possible under law|[Pp]ublic [Dd]omain|licensed under|MIT license|CC attribution license|available under BSD3 terms|SPDX-License-Identifier/ && !seen[comment]++) {
-                    printf "%s\n\n%s\n", file, comment
-                }
-            }
-            FNR == 1 { if (lines != "") check(lines, previous); inside = 0; lines = ""; previous = FILENAME }
-            inside { block = block $0 "\n"; if (/\*\//) { inside = 0; check(block, FILENAME) } next }
-            /^[[:space:]]*\/\// { lines = lines $0 "\n"; next }
-            lines != "" { check(lines, FILENAME); lines = "" }
-            /\/\*/ { block = $0 "\n"; if (/\*\//) check(block, FILENAME); else inside = 1 }
-            END { if (lines != "") check(lines, previous) }
-        '
-    ) > "$package/licenses/redis-source-notices.txt" || fail "the notices in the source files of Redis could not be read"
+            -not -name ssl.c -not -name hiredis_ssl.h
+    ) | add_source_notices "$package" redis-source-notices "$src"
 }
 
 redis_source() {

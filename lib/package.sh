@@ -38,6 +38,33 @@ add_license_from_comment() {
     ' "$file" > "$package/licenses/$name.txt" || fail "no license comment with \"$text\" for $name in $file"
 }
 
+# Some programs have code of other authors in their own source files, with its license only in a
+# comment. This writes each different notice one time, after the name of its file. The names of the
+# files come on the standard input and start from the folder of the source. The last argument is a
+# pattern for notices with other words.
+add_source_notices() {
+    local package="$1" name="$2" src="$3" extra="${4:-^$}"
+
+    (
+        cd "$src"
+        LC_ALL=C sort | LC_ALL=C xargs awk -v extra="$extra" '
+            function check(comment, file) {
+                if ((comment ~ /Redistribution and use|Permission is hereby granted|Permission to use, copy|provided .as-is|presented "as is"|To the extent possible under law|[Pp]ublic [Dd]omain|licensed under|MIT license|CC attribution license|available under BSD3 terms|SPDX-License-Identifier|Boost Software License|Apache License|BEER-WARE/ || comment ~ extra) && !seen[comment]++) {
+                    printf "%s\n\n%s\n", file, comment
+                }
+            }
+            FNR == 1 { if (lines != "") check(lines, previous); inside = 0; lines = ""; previous = FILENAME }
+            inside { block = block $0 "\n"; if (/\*\//) { inside = 0; check(block, FILENAME) } next }
+            /^[[:space:]]*(\/\/|\/\*.*\*\/[[:space:]]*$)/ { lines = lines $0 "\n"; next }
+            lines != "" { check(lines, FILENAME); lines = "" }
+            /\/\*/ { block = $0 "\n"; if (/\*\//) check(block, FILENAME); else inside = 1 }
+            END { if (lines != "") check(lines, previous) }
+        '
+    ) > "$package/licenses/$name.txt" || fail "the notices in the source files of $name could not be read"
+
+    [ -s "$package/licenses/$name.txt" ] || fail "the source files have no notices for $name"
+}
+
 # Copies each license file of a Go module or an npm package to a folder of the package. A file in
 # a subfolder counts too, because it can be the license of code from another project. Test data,
 # nested node_modules and source code such as license.go do not count. Returns 1 when the module

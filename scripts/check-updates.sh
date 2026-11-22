@@ -54,6 +54,11 @@ github_latest() {
     github_api "repos/$1/releases/latest" | jq -r .tag_name | sed -E "s/^${2:-v}//"
 }
 
+# For a project that has tags such as v0.8.7 and no releases.
+github_latest_tag() {
+    github_api "repos/$1/tags?per_page=100" | jq -r '.[].name' | sed -nE 's/^v([0-9]+(\.[0-9]+)+)$/\1/p' | sort -V | tail -1
+}
+
 pecl_latest() {
     curl -fsS --max-time 30 "https://pecl.php.net/rest/r/$1/stable.txt"
 }
@@ -111,6 +116,7 @@ report nghttp2 "$(github_latest nghttp2/nghttp2)"
 report libmaxminddb "$(github_latest maxmind/libmaxminddb "")"
 report geoip2 "$(github_latest leev/ngx_http_geoip2_module "")"
 report njs "$(github_latest nginx/njs "")"
+report pgvector "$(github_latest_tag pgvector/pgvector)"
 report libsodium "$(github_latest jedisct1/libsodium "" | sed 's/-RELEASE$//')"
 report libzip "$(github_latest nih-at/libzip)"
 report libjpeg-turbo "$(github_latest libjpeg-turbo/libjpeg-turbo "")"
