@@ -167,10 +167,11 @@ update_source() {
     local name="$1" current="$2" newest="$3" result source_current source_result
 
     # These packages have one line that follows the newest release. A new major version is a new
-    # line, and scripts/check-lines.sh reports it. cloudflared is not in this list. Its version
-    # starts with the year. Its one line 1 takes each release.
+    # line, and scripts/check-lines.sh reports it. A new major version of a PECL extension can drop a
+    # PHP version or break the library of a site. cloudflared is not in this list. Its version starts
+    # with the year. Its one line 1 takes each release.
     case "$name" in
-        mailpit | composer | wp-cli | redis-8)
+        mailpit | composer | wp-cli | redis-8 | pecl-*)
             if [ "${newest%%.*}" != "${current%%.*}" ]; then
                 echo "- $name: $newest is a new major version. It needs the choice of the owner." >> "$summary"
                 return

@@ -107,7 +107,7 @@ add_mongodb_notices() {
         cd "$src"
         find . -type f \( -name '*.c' -o -name '*.h' \) | sed 's|^\./||' |
             grep -v -E '^(tests|src/libmongocrypt[^/]*|src/libmongoc/src/zlib-[^/]*)/|(secure-channel|cng|sspi|windows)'
-    ) | add_source_notices "$package" mongodb-source-notices "$src"
+    ) | add_source_notices "$package" mongodb-source-notices "$src" "permission under its copyrights"
 }
 
 # The libraries in the source of PHP that the package contains. PCRE2, libgd and xxHash have their

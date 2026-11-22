@@ -241,7 +241,9 @@ if ($pid === 0) {
     while (true) {
         $ready = [$server, ...$clients];
         $none = null;
-        stream_select($ready, $none, $none, 20);
+        if (! stream_select($ready, $none, $none, 20)) {
+            posix_kill(posix_getpid(), SIGKILL);
+        }
         foreach ($ready as $connection) {
             if ($connection === $server) {
                 $clients[] = stream_socket_accept($server, 20);
@@ -280,8 +282,9 @@ if ($answer !== "pong" || $bson->get("name") !== "Ann" || (string) $bson->get("i
 echo "  mongodb ", phpversion("mongodb"), "\n";
 '
 undefined="$(nm -u "$extensions/mongodb.so")"
-! echo "$undefined" | grep -E "_(mongoc|bson|SSL|EVP|utf8proc)_" || { echo "error: mongodb.so needs a library from outside" >&2; exit 1; }
-! otool -L "$extensions/mongodb.so" | tail -n +2 | grep -E "ssl|crypto|snappy|zstd|sasl" || { echo "error: mongodb.so links a library that the package does not have" >&2; exit 1; }
+! echo "$undefined" | grep -E "_(mongoc|bson|kms|utf8proc|SSL|EVP|X509|BIO|CRYPTO|ERR|RAND|OPENSSL)_" || { echo "error: mongodb.so needs a library from outside" >&2; exit 1; }
+linked="$(otool -L "$extensions/mongodb.so")"
+! echo "$linked" | tail -n +2 | grep -E "ssl|crypto|snappy|zstd|sasl" || { echo "error: mongodb.so links a library that the package does not have" >&2; exit 1; }
 
 licenses="php openssl icu libintl oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype
 libyaml openldap libpq imagemagick igbinary redis xdebug pcov apcu yaml imagick mailparse gmp gmp-gpl
@@ -297,6 +300,9 @@ for name in $licenses; do
     [ -s "$root/licenses/$name.txt" ] || missing="$missing $name"
 done
 [ -z "$missing" ] || { echo "error: licenses are missing:$missing" >&2; exit 1; }
+for author in "International Business Machines" "Internet Software Consortium" "Troy D. Hanson" "Steven G. Johnson" "University of California"; do
+    grep -qF "$author" "$root/licenses/mongodb-source-notices.txt" || { echo "error: the notices of mongodb do not name $author" >&2; exit 1; }
+done
 echo "==> the package has all $(echo $licenses | wc -w | tr -d ' ') license files"
 
 echo "==> php-config gives paths inside the package"
