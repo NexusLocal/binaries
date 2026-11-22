@@ -40,7 +40,7 @@ add_postgresql_licenses() {
         find contrib src -name '*.[chly]' -type f -not -path 'src/test/*' -not -path 'src/tools/*' \
             -not -path 'src/pl/plperl/*' -not -path 'src/pl/plpython/*' -not -path 'src/pl/tcl/*'
     ) | add_source_notices "$package" postgresql-source-notices "$src" \
-        "Rights are granted|retained in all copies|copyrighted by|Andrew Gierth|Oliver Elphick"
+        "Rights are granted|You may redistribute|give permission|retained in all copies|copyrighted by|Andrew Gierth|Oliver Elphick"
 }
 
 # pg_config gives each path from its own location. So the extension goes into the same folder as

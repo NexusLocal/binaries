@@ -49,13 +49,19 @@ case "$(basename "$root")" in
 esac
 
 # With enable_seqscan off, the plan of the query uses the index.
-test_vector() {
-    local database="$1" plan
-    plan="$("${psql[@]}" -At -d "$database" -c "set enable_seqscan = off; explain select id from embeddings order by value <-> '[3,1,2]' limit 1")"
+test_vector_index() {
+    local database="$1" column="$2" index="$3" query plan
+    query="select id from embeddings order by $column <-> '[3,1,2]' limit 1"
+    plan="$("${psql[@]}" -At -d "$database" -c "set enable_seqscan = off; explain $query")"
 
-    echo "$plan" | grep -q embeddings_hnsw || { echo "error: vector does not use its index in $database: $plan" >&2; exit 1; }
-    [ "$("${psql[@]}" -At -d "$database" -c "set enable_seqscan = off; select id from embeddings order by value <-> '[3,1,2]' limit 1")" = "2" ] \
-        || { echo "error: vector did not find the nearest row in $database" >&2; exit 1; }
+    echo "$plan" | grep -q "$index" || { echo "error: vector does not use $index in $database: $plan" >&2; exit 1; }
+    [ "$("${psql[@]}" -At -d "$database" -c "set enable_seqscan = off; $query")" = "2" ] \
+        || { echo "error: vector did not find the nearest row with $index in $database" >&2; exit 1; }
+}
+
+test_vector() {
+    test_vector_index "$1" value embeddings_hnsw
+    test_vector_index "$1" half embeddings_ivfflat
 }
 
 if [ -n "$extensions" ]; then
@@ -107,6 +113,12 @@ Philip Warner
 Whitley
 Eric P. Allman
 EOF
+case "$(basename "$root")" in
+    postgresql-14.*)
+        grep -q -F "Martin Birgmeier" "$root/licenses/postgresql-source-notices.txt" ||
+            { echo "error: the notice of Martin Birgmeier is missing" >&2; exit 1; }
+        ;;
+esac
 echo "==> the package has the notices of the source files"
 
 echo "==> all PostgreSQL tests passed"

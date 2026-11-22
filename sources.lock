@@ -70,7 +70,7 @@ postgresql-17 17.12 9cf136a703d8ee2f83465c43be4e9e8e7930c82b0bfba13be7e2537be769
 postgresql-18 18.7 441dfae4280cae3e0425e5f876f80559fb0731c140f1aae22b3e5a54d0411bfd https://ftp.postgresql.org/pub/source/v18.7/postgresql-18.7.tar.bz2
 postgresql-19 19.0 a89fd70efbad6a08c7dbed8d4872e3af30170d9e5ca9dc7906523be95b4e692d https://ftp.postgresql.org/pub/source/v19.0/postgresql-19.0.tar.bz2
 pgvector 0.8.7 cac0b10c360f05b2d521200105ba3697e773d4cd3731f5a915a7e37ebe0bea85 https://github.com/pgvector/pgvector/archive/refs/tags/v0.8.7.tar.gz
-node-22 22.23.5d0c68c321161bb2c6483efea9a343010dea8e5e7f60d73c6a7eba140016d662f https://nodejs.org/dist/v22.23.5/node-v22.23.5-darwin-arm64.tar.xz
+node-22 22.23.5 d0c68c321161bb2c6483efea9a343010dea8e5e7f60d73c6a7eba140016d662f https://nodejs.org/dist/v22.23.5/node-v22.23.5-darwin-arm64.tar.xz
 node-24 24.22.3 1d64136c8a43d648d1b3bad10797a4c995b1ca032d2bde8799de43b37f058fe5 https://nodejs.org/dist/v24.22.3/node-v24.22.3-darwin-arm64.tar.xz
 node-26 26.13.1 af6202f5370a3a5209e85dc543758dfd9f44c8726626a236730cd603a67a8559 https://nodejs.org/dist/v26.13.1/node-v26.13.1-darwin-arm64.tar.xz
 imagemagick 7.1.2-36 5ba807e38a6bcb7c3c96a166485e270c5017aaa6b166f0440dc4b2badf6e6167 https://github.com/ImageMagick/ImageMagick/archive/refs/tags/7.1.2-36.tar.gz
