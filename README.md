@@ -29,8 +29,8 @@ and its size.
 After every successful build on `main`, CI publishes each new package as the release
 `<name>-<version>-r<revision>`, with the package, its JSON file and every source archive it was
 built from. A release that exists already never changes. A recipe sets `PACKAGE_REVISION` higher
-when it changes and the upstream version stays the same. When only the sources of a package
-change, for example OpenSSL, `scripts/publish.sh` gives it the next revision by itself.
+when it changes and the upstream version stays the same. When only a source such as OpenSSL
+changes, `scripts/publish.sh` gives the package the next revision by itself.
 
 The Nexus app reads
 [`manifest.json`](https://github.com/NexusLocal/binaries/releases/latest/download/manifest.json),
@@ -48,8 +48,8 @@ build. `scripts/check-updates.sh` reports a date that endoflife.date changed.
 
 `scripts/publish.sh` does this work. `NEXUS_DRY_RUN=1 scripts/publish.sh <folder>` shows what it
 would publish and writes the manifest into the folder, without a change on GitHub. A package
-whose build failed keeps its package of the newest manifest. So one failure does not hold back
-the updates of the other packages.
+whose build or publication failed keeps its package of the newest manifest. So one failure does
+not hold back the updates of the other packages.
 
 ## Automatic updates
 

@@ -40,10 +40,36 @@ download_verified() {
     echo "$sha256  $target" | shasum -a 256 -c --status || { echo "error: SHA-256 mismatch for $url" >&2; exit 1; }
 }
 
-# The highest revision of <name>-<version> that has a release, or nothing.
-newest_revision() {
+# The revisions of the tags of <name>-<version>, the highest first.
+tag_revisions() {
     gh api --paginate "repos/$repo/git/matching-refs/tags/$1-r" --jq '.[].ref' |
-        sed -nE "s|^refs/tags/$1-r([0-9]+)\$|\1|p" | sort -n | tail -1
+        sed -nE "s|^refs/tags/$1-r([0-9]+)\$|\1|p" | sort -rn
+}
+
+release_exists() {
+    local answer
+    answer="$(gh api "repos/$repo/releases/tags/$1" --jq .tag_name 2>&1)" && return 0
+
+    case "$answer" in
+        *"HTTP 404"*) return 1 ;;
+    esac
+
+    echo "error: GitHub did not say if the release $1 exists: $answer" >&2
+    exit 1
+}
+
+# The first of the revisions that has a release, or nothing. A tag can stay when somebody deletes
+# its release.
+newest_released() {
+    local version="$1" revision
+    shift
+
+    for revision in "$@"; do
+        if release_exists "$version-r$revision"; then
+            echo "$revision"
+            return
+        fi
+    done
 }
 
 source_lines() {
@@ -52,15 +78,17 @@ source_lines() {
 
 # An older release has no recipe_revision. Its revision is the revision of its recipe.
 recipe_revision() {
-    jq -r '.recipe_revision // .revision' "$1"
+    jq -er '.recipe_revision // .revision' "$1"
 }
 
-# The URL of a source does not count, because its SHA-256 says what is in it.
-same_build() {
-    local json="$1" released="$2"
+# Two packages with the same text come from the same recipe and the same sources. The URL of a
+# source does not count, because its SHA-256 says what is in it.
+build_identity() {
+    local json="$1" recipe sources
+    recipe="$(recipe_revision "$json")" || return 1
+    sources="$(source_lines "${json%.json}.sources.txt" | cut -d' ' -f1-3 | sort)" || return 1
 
-    [ "$(recipe_revision "$json")" = "$(recipe_revision "$released")" ] || return 1
-    [ "$(source_lines "${json%.json}.sources.txt" | cut -d' ' -f1-3 | sort)" = "$(source_lines "${released%.json}.sources.txt" | cut -d' ' -f1-3 | sort)" ]
+    printf '%s\n%s\n' "$recipe" "$sources"
 }
 
 create_release() {
@@ -94,31 +122,31 @@ add_entry() {
 }
 
 # A new library gives a package with the version and the recipe revision of a release that exists.
-# Such a package gets the next revision. Without it, the update would wait for the next release of
+# Such a package gets the next revision. Otherwise the update would wait for the next release of
 # PHP or PostgreSQL.
 publish_package() {
-    local json="$1" base version newest released revision recipe
+    local json="$1" base version revisions newest released identity released_identity revision recipe
     base="$(basename "$json" .json)"
     version="$(jq -r '.name + "-" + .version' "$json")"
-    newest="$(newest_revision "$version")"
+    revisions="$(tag_revisions "$version")"
+    newest="$(newest_released "$version" $revisions)"
 
-    if [ -z "$newest" ]; then
-        create_release "$json" "$dist/$base.sources.txt"
-        add_entry "$json"
-        return
-    fi
+    if [ -n "$newest" ]; then
+        released="$work/released/$version-r$newest"
+        gh release download "$version-r$newest" --repo "$repo" --pattern "$base.json" --pattern "$base.sources.txt" --dir "$released" --clobber
+        identity="$(build_identity "$json")"
+        released_identity="$(build_identity "$released/$base.json")"
 
-    released="$work/released/$version-r$newest"
-    gh release download "$version-r$newest" --repo "$repo" --pattern "$base.json" --pattern "$base.sources.txt" --dir "$released" --clobber
-
-    if same_build "$json" "$released/$base.json"; then
-        echo "==> $version-r$newest has the same recipe and sources, the manifest keeps its files"
-        add_entry "$released/$base.json"
-        return
+        if [ "$identity" = "$released_identity" ]; then
+            echo "==> $version-r$newest has the same recipe and sources, the manifest keeps its files"
+            add_entry "$released/$base.json"
+            return
+        fi
     fi
 
     recipe="$(recipe_revision "$json")"
-    revision=$((newest + 1))
+    revision="$(echo "$revisions" | head -1)"
+    revision=$((${revision:-0} + 1))
     if [ "$recipe" -gt "$revision" ]; then
         revision="$recipe"
     fi
@@ -142,11 +170,14 @@ add_upstream_entry() {
         >> "$entries"
 }
 
-# NEXUS_DRY_RUN=1 changes nothing on GitHub: every release counts as new, nothing is downloaded,
-# and the manifest is written to <folder>/manifest.json.
+# NEXUS_DRY_RUN=1 changes nothing on GitHub. It reads the releases and downloads no source. The
+# manifest goes to <folder>/manifest.json.
 if [ "${NEXUS_DRY_RUN:-}" = "1" ]; then
     gh() {
-        echo "[dry run] gh $1 $2 $3 ..." >&2
+        case "$1 $2" in
+            "api "* | "release download") command gh "$@" ;;
+            *) echo "[dry run] gh $1 $2 $3 ..." >&2 ;;
+        esac
     }
     download_verified() {
         echo "[dry run] download $1" >&2
@@ -154,9 +185,21 @@ if [ "${NEXUS_DRY_RUN:-}" = "1" ]; then
     }
 fi
 
+# A server of a source can refuse a download. Then that package keeps its package of the newest
+# manifest and the others still get their update. bash ignores set -e in a condition. So the status
+# comes from $? and not from an if.
+failed=""
 for json in "$dist"/*-macos-arm64.json; do
     [ -e "$json" ] || continue
-    publish_package "$json"
+
+    set +e
+    (set -e; publish_package "$json")
+    status=$?
+    set -e
+
+    if [ "$status" -ne 0 ]; then
+        failed="$failed $(basename "$json" -macos-arm64.json)"
+    fi
 done
 
 add_upstream_entry node-22 node 22 tar.xz
@@ -173,6 +216,11 @@ keep_previous_entries() {
     mkdir -p "$previous"
 
     if ! "$root/scripts/release-manifest.sh" download "$previous" > /dev/null; then
+        if [ -n "$failed" ]; then
+            echo "error: no earlier manifest for the packages that were not published:$failed" >&2
+            exit 1
+        fi
+
         echo "==> no earlier manifest, so no package is kept"
         return
     fi
@@ -212,3 +260,8 @@ else
 fi
 
 echo "==> the manifest lists $(jq '.packages | length' "$work/manifest.json") packages"
+
+if [ -n "$failed" ]; then
+    echo "error: these packages were not published:$failed" >&2
+    exit 1
+fi
