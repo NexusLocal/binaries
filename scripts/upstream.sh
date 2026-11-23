@@ -60,3 +60,12 @@ listed_latest() {
     curl -fsSL --max-time 30 "$1" | grep -oE "$2-[0-9]+(\.[0-9]+)+\.$suffix" | sed -E "s/^$2-//; s/\.$suffix$//" |
         awk -v line="${3:-}" 'line == "" || index($0, line ".") == 1' | sort -V | tail -1
 }
+
+# The newest MongoDB Database Tools with a build for macOS on Apple silicon. The list also has
+# pre-releases such as 100.0.0-alpha1. So only a version with three numbers counts. With a line
+# such as 100, only the versions of that line count.
+mongodb_tools_latest() {
+    curl -fsS --max-time 60 https://downloads.mongodb.org/tools/db/full.json |
+        jq -r '.versions[] | select(any(.downloads[]?; .name == "macos" and .arch == "arm64")) | .version' |
+        grep -xE '[0-9]+\.[0-9]+\.[0-9]+' | awk -v line="${1:-}" 'line == "" || index($0, line ".") == 1' | sort -V | tail -1
+}

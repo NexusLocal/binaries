@@ -9,8 +9,9 @@
 # workflow opens an issue for it and changes nothing. Old lines that Nexus left out on purpose
 # do not count: only a line newer than the newest line of support.lock does. MySQL and MariaDB
 # count only with a long-term support release, because their other releases come each quarter.
-# cloudflared has no report here. Its one line 1 takes each release, also in a new year. A library
-# counts with a line newer than its line in sources.lock.
+# MongoDB counts only with a new major version such as 10.0, because Nexus offers only its major
+# lines. cloudflared has no report here. Its one line 1 takes each release, also in a new year. A
+# library and the MongoDB Database Tools count with a line newer than their line in sources.lock.
 #
 # Needs curl and jq. It uses GH_TOKEN for the GitHub API when it is set.
 
@@ -25,7 +26,8 @@ newest_known() {
 
 # endoflife.date product, the name in support.lock, the title, and a filter:
 #   lts     only long-term support lines
-#   major   only a new major version, because the line follows the newest minor version
+#   major   only a new major version, because a Redis line follows the newest minor version and
+#           Nexus offers only the major lines of MongoDB
 #   stable  only an even minor version, because an odd one is the mainline of nginx
 report_cycles() {
     local product="$1" name="$2" title="$3" filter="${4:-}" known cycles
@@ -75,6 +77,7 @@ report_cycles php php PHP
 report_cycles mysql mysql MySQL lts
 report_cycles mariadb mariadb MariaDB lts
 report_cycles postgresql postgresql PostgreSQL
+report_cycles mongodb mongodb MongoDB major
 report_cycles nodejs node Node.js
 report_cycles redis redis Redis major
 report_cycles nginx nginx nginx stable
@@ -97,6 +100,7 @@ report_library protobuf-c protobuf-c 2 "$(github_latest protobuf-c/protobuf-c)"
 report_library apr APR 2 "$(listed_latest https://archive.apache.org/dist/apr/ apr)"
 report_library apr-util APR-util 2 "$(listed_latest https://archive.apache.org/dist/apr/ apr-util)"
 report_library headers-more headers-more 1 "$(github_latest_tag openresty/headers-more-nginx-module)"
+report_library mongodb-tools "MongoDB Database Tools" 1 "$(mongodb_tools_latest)"
 report_library pkgconf pkgconf 1 "$(listed_latest https://distfiles.ariadne.space/pkgconf/ pkgconf)"
 report_library m4 m4 1 "$(listed_latest https://ftp.gnu.org/gnu/m4/ m4)"
 report_library autoconf autoconf 1 "$(listed_latest https://ftp.gnu.org/gnu/autoconf/ autoconf)"

@@ -17,6 +17,7 @@
 #   - Composer: the .sha256sum file next to the phar
 #   - WordPress: the .sha1 file next to the archive
 #   - Go: the JSON of the downloads on go.dev
+#   - MongoDB and the MongoDB Database Tools: full.json of the downloads on downloads.mongodb.org
 #   - PostGIS: the .md5 file next to the archive, and the SHA-256 of two downloads
 #
 # Some sources have no upstream checksum: PECL, MySQL, nginx, GNU, FreeType, libpng, libwebp,
@@ -48,7 +49,9 @@ fetch() {
 }
 
 # The SHA-256 that upstream publishes for a file, or nothing. A WordPress archive gets its SHA-1
-# with the prefix sha1:, and a PostGIS archive gets its MD5 with the prefix md5:.
+# with the prefix sha1:, and a PostGIS archive gets its MD5 with the prefix md5:. full.json of
+# MongoDB can name one file two times. Two different checksums give two lines, and then the check
+# fails.
 upstream_checksum() {
     local url="$1" version="$2" file="${1##*/}" repo tag
 
@@ -84,6 +87,12 @@ upstream_checksum() {
             ;;
         https://go.dev/dl/*)
             curl -fsS --max-time 60 'https://go.dev/dl/?mode=json&include=all' | jq -r --arg file "$file" '.[].files[] | select(.filename == $file) | .sha256'
+            ;;
+        https://fastdl.mongodb.org/tools/db/*)
+            curl -fsS --max-time 60 https://downloads.mongodb.org/tools/db/full.json | jq -r --arg url "$url" '[.versions[].downloads[]? | select(.archive.url == $url) | .archive.sha256] | unique | .[]'
+            ;;
+        https://fastdl.mongodb.org/osx/*)
+            curl -fsS --max-time 120 https://downloads.mongodb.org/full.json | jq -r --arg url "$url" '[.versions[].downloads[]? | select(.archive.url == $url) | .archive.sha256] | unique | .[]'
             ;;
     esac
 }

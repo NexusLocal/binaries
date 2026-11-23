@@ -36,9 +36,13 @@ The Nexus app reads
 [`manifest.json`](https://github.com/NexusLocal/binaries/releases/latest/download/manifest.json),
 which lists every package with its version line, URL, SHA-256 and license. A release cannot change
 after it is published. So each manifest is a new release, and that release becomes the latest
-release. `scripts/release-manifest.sh` publishes it. Node, Composer and WP-CLI are in the
-manifest too. Nexus downloads them from nodejs.org, getcomposer.org and the GitHub releases of
-WP-CLI, with the SHA-256 from `sources.lock`.
+release. `scripts/release-manifest.sh` publishes it. Node, the MongoDB server, Composer and WP-CLI
+are in the manifest too. Nexus downloads them from nodejs.org, fastdl.mongodb.org, getcomposer.org
+and the GitHub releases of WP-CLI, with the SHA-256 from `sources.lock`.
+
+NexusLocal does not give out the MongoDB server 7.0, 8.0 and 9.0, because its license is the SSPL.
+The file of MongoDB is a `.tgz`. The manifest gives the format `tar.xz`, because an older Nexus
+cannot read a manifest with an unknown format. `/usr/bin/tar -xf` reads both formats.
 
 `support.lock` gives the support of each version line: whether it is a long-term support
 release, and the last day of security fixes from endoflife.date. The manifest has them as `lts`
@@ -68,7 +72,8 @@ GitHub tags and commits. The script downloads such a source twice. Both download
 A package with a source archive of its own (MySQL, Mailpit and cloudflared) gets both in one update.
 fmt gets the version that the newest MariaDB releases name in `cmake/libfmt.cmake`, in the same
 update as MariaDB. ICU, libpng, OpenLDAP, APR and some other libraries stay in their version line of
-`sources.lock`, for example OpenLDAP 2.6. ngx_brotli has no releases. So it gets the newest commit.
+`sources.lock`, for example OpenLDAP 2.6. The MongoDB Database Tools stay in their line 100 too.
+ngx_brotli has no releases. So it gets the newest commit.
 GMP, Boost and protobuf change rarely. So a person updates them. Then the workflow commits, pushes
 and starts the build. No person is needed for another update in a version line.
 
@@ -102,6 +107,8 @@ The owner gets an issue, and so an email, in three cases:
   `go.sum` of the source of the same tag. The Mailpit package also has the license files of the
   npm packages of its web UI, in `licenses/npm-packages/`. The build downloads the packages that
   `package-lock.json` of the source names. Each download must have the SHA-512 of that file.
+  The MongoDB Database Tools have `THIRD-PARTY-NOTICES` of MongoDB instead of
+  `licenses/go-modules/`. That file gives the license of each Go module in the binaries.
 
 ## Packages
 
@@ -113,6 +120,7 @@ The owner gets an issue, and so an email, in three cases:
 | Redis | 7.2, 8.2, newest 8 | redis-server, redis-cli and redis-benchmark, without TLS. 7.2 has the BSD license. Redis 8 is given out under the AGPLv3, one of its three licenses. 7.4 is not built, because its only licenses are RSALv2 and SSPLv1. |
 | Mailpit | 1 | The official darwin-arm64 binary of Mailpit, repackaged as tar.xz with its MIT license and the licenses of its Go modules and npm packages. Nexus uses it to catch the mail of the local sites. |
 | cloudflared | 1 | The official darwin-arm64 binary of cloudflared, repackaged as tar.xz with its Apache-2.0 license and the licenses of its Go modules. The build signs it again with an ad hoc signature. Nexus uses it for public links. The line 1 takes each release, because the version starts with the year. |
+| MongoDB Database Tools | 100 | The official macOS arm64 binaries mongodump and mongorestore of MongoDB, repackaged as tar.xz with their Apache-2.0 license and `THIRD-PARTY-NOTICES`. The build signs them again with an ad hoc signature. Nexus uses them to make a backup of a MongoDB database and to restore it. The MongoDB server is not a package. See [Releases and the manifest](#releases-and-the-manifest). |
 | MySQL | 8.0, 8.4, 9.7 | The official Oracle builds for macOS on Apple silicon, repackaged: without the debug server, the test and MyISAM tools, the static libraries and the headers. Each release also carries the matching source archive. |
 | MariaDB | 10.11, 11.4, 11.8, 12.3 | Compiled, because MariaDB publishes no macOS builds. Without ColumnStore, RocksDB, Mroonga, Spider, CONNECT, OQGraph, S3, Galera and the compression providers. The package keeps the server and the client tools, with links under the mysql* names. Run `scripts/mariadb-install-db` from the package folder with `--basedir=.`, because the script breaks on a space in the path. |
 | PostgreSQL | 14, 15, 16, 17, 18, 19 | With ICU, libxml2, uuid and all contrib modules (pgcrypto, uuid-ossp, citext, hstore, pg_stat_statements and more). From 15 on also with pgvector, PostGIS 3.7 (with topology and vector tiles, without raster) and pgRouting 4.0. OpenSSL, ICU, GEOS, PROJ and GMP are shared libraries in the package. libpq refuses a static OpenSSL. GEOS and GMP have the LGPL license. From 15 on the license of the package is PostgreSQL and GPL-3.0-or-later. |

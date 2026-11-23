@@ -68,6 +68,14 @@ mariadb_fmt() {
         grep -oE 'fmtlib/fmt/releases/download/[0-9.]+/' | cut -d/ -f5 | sort -V | tail -1
 }
 
+# full.json of MongoDB lists each build of each release and has a size of about 50 MB. So the
+# script reads it one time for all lines. Only a production release with a build for macOS on Apple
+# silicon counts.
+mongodb_releases() {
+    curl -fsS --max-time 120 https://downloads.mongodb.org/full.json |
+        jq -r '.versions[] | select(.production_release and any(.downloads[]?; .target == "macos" and .arch == "arm64" and .edition == "base")) | .version'
+}
+
 for line in 8.2 8.3 8.4 8.5; do report "php-$line" "$(endoflife_latest php "$line")"; done
 for line in 8.0 8.4 9.7; do report "mysql-$line" "$(endoflife_latest mysql "$line")"; done
 
@@ -96,6 +104,8 @@ report nginx "$(endoflife_latest nginx "$(pinned nginx | cut -d. -f1-2)")"
 report httpd "$(endoflife_latest apache-http-server 2.4)"
 report openssl "$(endoflife_latest openssl 3.5)"
 for line in 22 24 26; do report "node-$line" "$(node_latest "$line")"; done
+mongodb_versions="$(mongodb_releases)"
+for line in 7.0 8.0 9.0; do report "mongodb-$line" "$(awk -v line="$line." 'index($0, line) == 1' <<< "$mongodb_versions" | sort -V | tail -1)"; done
 report composer "$(curl -fsS --max-time 30 https://getcomposer.org/versions | jq -r '.stable[0].version')"
 report mailpit "$(github_latest axllent/mailpit)"
 report cloudflared "$(github_latest cloudflare/cloudflared "")"
@@ -135,6 +145,7 @@ report protobuf-c "$(github_line_tag protobuf-c/protobuf-c "v$(pinned_line proto
 report apr "$(listed_latest https://archive.apache.org/dist/apr/ apr "$(pinned_line apr 2)")"
 report apr-util "$(listed_latest https://archive.apache.org/dist/apr/ apr-util "$(pinned_line apr-util 2)")"
 report headers-more "$(github_line_tag openresty/headers-more-nginx-module "v$(pinned_line headers-more 1).")"
+report mongodb-tools "$(mongodb_tools_latest "$(pinned_line mongodb-tools 1)")"
 report_commit ngx_brotli google/ngx_brotli
 report pkgconf "$(listed_latest https://distfiles.ariadne.space/pkgconf/ pkgconf "$(pinned_line pkgconf 1)")"
 report m4 "$(listed_latest https://ftp.gnu.org/gnu/m4/ m4 "$(pinned_line m4 1)")"
@@ -186,3 +197,4 @@ report_support redis 8 "$(endoflife_end redis "$(pinned_line redis-8 2)")"
 report_support nginx "$(pinned_line nginx 2)" "$(endoflife_end nginx "$(pinned_line nginx 2)")"
 report_support httpd 2.4 "$(endoflife_end apache-http-server 2.4)"
 for line in 22 24 26; do report_support node "$line" "$(endoflife_end nodejs "$line")"; done
+for line in 7.0 8.0 9.0; do report_support mongodb "$line" "$(endoflife_end mongodb "$line")"; done

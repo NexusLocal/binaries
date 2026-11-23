@@ -127,7 +127,8 @@ jobs:
 
   # A package whose build or test failed has no artifact. A package that is not in the plan has no
   # artifact either. scripts/publish.sh keeps its package of the newest manifest. So the other
-  # packages still get their update. The manifest also gets the new Node.js, Composer and WP-CLI.
+  # packages still get their update. The manifest also gets the new Node.js, MongoDB, Composer and
+  # WP-CLI.
   release:
     needs: [plan, build]
     if: ${{ !cancelled() && needs.plan.result == 'success' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}

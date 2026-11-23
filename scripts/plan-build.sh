@@ -111,8 +111,8 @@ while read -r name product version; do
     fi
 done < <(jq -r '.[] | "\(.name) \(.product) \(if .version == "" then "-" else .version end)"' "$work/packages.json" | sed 's/ -$//')
 
-# A source that no package lists is a tool, a download that Nexus gives out as it is, or an input of
-# the WP-CLI test. Some tools serve only one or two products.
+# A source that no package lists is a tool, a download that the manifest names as it is, or an input
+# of the WP-CLI test. Some tools serve only one or two products.
 changed_tools=""
 
 while read -r name; do
@@ -120,7 +120,7 @@ while read -r name; do
     grep -qx "$name" "$work/used.txt" && continue
 
     case "$name" in
-        node-* | composer) say "$name changed. The manifest gets it without a package." ;;
+        node-* | mongodb-[0-9]* | composer) say "$name changed. The manifest gets it without a package." ;;
         wp-cli | wordpress | sqlite-database-integration) add_products "php" "$name" ;;
         go) add_products "mailpit cloudflared" "$name" ;;
         m4 | autoconf) add_products "php" "$name" ;;

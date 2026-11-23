@@ -236,6 +236,13 @@ add_upstream_entry node-26 node 26 tar.xz
 add_upstream_entry composer composer 2 phar
 add_upstream_entry wp-cli wp-cli 2 phar
 
+# NexusLocal does not give out the MongoDB server, because its license is the SSPL. Nexus downloads
+# it from MongoDB. The file is a .tgz. The format stays tar.xz, because an older Nexus cannot read a
+# manifest with an unknown format. /usr/bin/tar -xf reads both formats.
+add_upstream_entry mongodb-7.0 mongodb 7.0 tar.xz
+add_upstream_entry mongodb-8.0 mongodb 8.0 tar.xz
+add_upstream_entry mongodb-9.0 mongodb 9.0 tar.xz
+
 # The lines of packages.json that the manifest of this run does not have.
 missing_lines() {
     jq -rs --slurpfile packages "$root/packages.json" '
