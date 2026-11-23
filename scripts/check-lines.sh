@@ -32,7 +32,7 @@ newest_known() {
 report_cycles() {
     local product="$1" name="$2" title="$3" filter="${4:-}" known cycles
     known="$(newest_known "$name")"
-    cycles="$(curl -fsS --max-time 30 "https://endoflife.date/api/$product.json" | jq -r --arg filter "$filter" \
+    cycles="$(read_url --max-time 30 "https://endoflife.date/api/$product.json" | jq -r --arg filter "$filter" \
         '.[] | select($filter != "lts" or (.lts != false)) | .cycle')"
 
     for cycle in $cycles; do

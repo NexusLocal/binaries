@@ -50,21 +50,21 @@ report_commit() {
 }
 
 endoflife_latest() {
-    curl -fsS --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '.[] | select(.cycle == $cycle) | .latest'
+    read_url --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '.[] | select(.cycle == $cycle) | .latest'
 }
 
 pecl_latest() {
-    curl -fsS --max-time 30 "https://pecl.php.net/rest/r/$1/stable.txt"
+    read_url --max-time 30 "https://pecl.php.net/rest/r/$1/stable.txt"
 }
 
 node_latest() {
-    curl -fsS --max-time 30 https://nodejs.org/dist/index.json | jq -r --arg major "v$1." '[.[] | select(.version | startswith($major))][0].version' | sed 's/^v//'
+    read_url --max-time 30 https://nodejs.org/dist/index.json | jq -r --arg major "v$1." '[.[] | select(.version | startswith($major))][0].version' | sed 's/^v//'
 }
 
 # The newest fmt that cmake/libfmt.cmake of a MariaDB release names. products/mariadb.sh reads
 # the same version. The older version in that file is for an old GCC.
 mariadb_fmt() {
-    curl -fsS --max-time 30 "https://raw.githubusercontent.com/MariaDB/server/mariadb-$1/cmake/libfmt.cmake" |
+    read_url --max-time 30 "https://raw.githubusercontent.com/MariaDB/server/mariadb-$1/cmake/libfmt.cmake" |
         grep -oE 'fmtlib/fmt/releases/download/[0-9.]+/' | cut -d/ -f5 | sort -V | tail -1
 }
 
@@ -72,7 +72,7 @@ mariadb_fmt() {
 # script reads it one time for all lines. Only a production release with a build for macOS on Apple
 # silicon counts.
 mongodb_releases() {
-    curl -fsS --max-time 120 https://downloads.mongodb.org/full.json |
+    read_url --max-time 120 https://downloads.mongodb.org/full.json |
         jq -r '.versions[] | select(.production_release and any(.downloads[]?; .target == "macos" and .arch == "arm64" and .edition == "base")) | .version'
 }
 
@@ -106,12 +106,12 @@ report openssl "$(endoflife_latest openssl 3.5)"
 for line in 22 24 26; do report "node-$line" "$(node_latest "$line")"; done
 mongodb_versions="$(mongodb_releases)"
 for line in 7.0 8.0 9.0; do report "mongodb-$line" "$(awk -v line="$line." 'index($0, line) == 1' <<< "$mongodb_versions" | sort -V | tail -1)"; done
-report composer "$(curl -fsS --max-time 30 https://getcomposer.org/versions | jq -r '.stable[0].version')"
+report composer "$(read_url --max-time 30 https://getcomposer.org/versions | jq -r '.stable[0].version')"
 report mailpit "$(github_latest axllent/mailpit)"
 report cloudflared "$(github_latest cloudflare/cloudflared "")"
 report wp-cli "$(github_latest wp-cli/wp-cli)"
-report wordpress "$(curl -fsS --max-time 30 https://api.wordpress.org/core/version-check/1.7/ | jq -r '.offers[0].version')"
-report sqlite-database-integration "$(curl -fsS --max-time 30 https://api.wordpress.org/plugins/info/1.0/sqlite-database-integration.json | jq -r .version)"
+report wordpress "$(read_url --max-time 30 https://api.wordpress.org/core/version-check/1.7/ | jq -r '.offers[0].version')"
+report sqlite-database-integration "$(read_url --max-time 30 https://api.wordpress.org/plugins/info/1.0/sqlite-database-integration.json | jq -r .version)"
 
 report pcre2 "$(github_latest PCRE2Project/pcre2 pcre2-)"
 report zlib "$(github_latest madler/zlib)"
@@ -152,14 +152,14 @@ report m4 "$(listed_latest https://ftp.gnu.org/gnu/m4/ m4 "$(pinned_line m4 1)")
 report autoconf "$(listed_latest https://ftp.gnu.org/gnu/autoconf/ autoconf "$(pinned_line autoconf 1)")"
 report cmake "$(github_latest Kitware/CMake)"
 report ninja "$(github_latest ninja-build/ninja)"
-report go "$(curl -fsS --max-time 30 'https://go.dev/dl/?mode=json' | jq -r '.[0].version' | sed 's/^go//')"
+report go "$(read_url --max-time 30 'https://go.dev/dl/?mode=json' | jq -r '.[0].version' | sed 's/^go//')"
 for extension in xdebug pcov redis apcu yaml imagick mailparse memcached mongodb; do report "pecl-$extension" "$(pecl_latest "$extension")"; done
 
 # The last day of security fixes in support.lock, against endoflife.date. The LTS flags are not
 # compared: endoflife.date gives a date for some of them, and the decision record sets them.
 # A line newer than each line that endoflife.date lists is unlisted.
 endoflife_end() {
-    curl -fsS --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '
+    read_url --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '
         def numbers: split(".") | map(tonumber? // 0);
         (map(select(.cycle == $cycle))[0]) as $match
         | if $match != null then (if $match.eol == false then "-" else $match.eol end)

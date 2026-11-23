@@ -95,6 +95,10 @@ The owner gets an issue, and so an email, in three cases:
   the licenses of the Go modules in the binaries of Mailpit and cloudflared.
 - **Pinned sources.** `sources.lock` gives the version, the SHA-256 and the URL of every source.
   The build stops when a download has a different SHA-256.
+- **A second try.** A server can fail for a short time, for example with HTTP status 504 or a
+  file that stops halfway. So each download of the build, the tests and the workflows tries again
+  (`lib/download.sh`). curl tries again after each error. A file with a different checksum comes
+  one more time, and `gh release download` and `go mod download` run a second time.
 - **Relocatable packages.** Every link to a library in the package becomes an `@rpath` link.
   Every Mach-O file is signed again, because macOS on Apple silicon does not run an unsigned
   binary.

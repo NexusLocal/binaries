@@ -16,6 +16,8 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 base="$(mktemp -d)"
 trap 'rm -rf "$base"' EXIT
 
+source "$repo/lib/download.sh"
+
 lock_field() {
     awk -v name="$1" -v field="$2" '$1 == name { print $field; found = 1 } END { if (!found) exit 1 }' "$repo/sources.lock"
 }
@@ -24,8 +26,7 @@ download() {
     local name="$1" target="$2" url sha256
     url="$(lock_field "$name" 4)"
     sha256="$(lock_field "$name" 3)"
-    curl -fsSL --retry 8 --retry-connrefused -o "$target" "$url"
-    echo "$sha256  $target" | shasum -a 256 -c --status || { echo "error: the SHA-256 of $name does not match sources.lock ($url)" >&2; exit 1; }
+    download_file "$url" "$target" "$sha256" || { echo "error: the download of $name failed twice, or its SHA-256 does not match sources.lock ($url)" >&2; exit 1; }
 }
 
 mkdir -p "$base/Nexus Test"

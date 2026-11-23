@@ -117,8 +117,13 @@ add_go_licenses() {
         grep -q -F -x "$path $version $sum" "$source/go.sum" || fail "the hash of $path $version in $binary is not in go.sum of the source"
     done < "$work/modules.txt"
 
+    # Each try writes the file again, so a failed first try leaves no lines in it.
+    download_go_modules() {
+        (cd "$work/empty" && go_tool mod download -json $(awk '{ print $1 "@" $2 }' "$work/modules.txt")) > "$work/download.json"
+    }
+
     log "Downloading the $(wc -l < "$work/modules.txt" | tr -d ' ') Go modules of $(basename "$binary") for their licenses"
-    (cd "$work/empty" && go_tool mod download -json $(awk '{ print $1 "@" $2 }' "$work/modules.txt")) > "$work/download.json" ||
+    try_twice download_go_modules ||
         fail "Go could not download and check all modules of $binary: $(/usr/bin/jq -r 'select(.Error) | .Error' "$work/download.json" | head -3)"
     /usr/bin/jq -r '"\(.Path) \(.Version) \(.Sum) \(.Dir)"' "$work/download.json" > "$work/downloaded.txt"
 
@@ -170,9 +175,8 @@ add_npm_licenses() {
             *) fail "package-lock.json has no SHA-512 for the npm package $name $version" ;;
         esac
 
-        curl -fsSL --retry 8 --retry-connrefused -o "$archive" "$url" || fail "the download of the npm package $name $version failed ($url)"
-        [ "sha512-$(shasum -a 512 "$archive" | cut -d' ' -f1 | xxd -r -p | base64)" = "$integrity" ] ||
-            fail "the SHA-512 of the npm package $name $version does not match package-lock.json"
+        download_file "$url" "$archive" "$integrity" ||
+            fail "the download of the npm package $name $version failed twice, or its SHA-512 does not match package-lock.json ($url)"
 
         mkdir -p "$dir"
         tar -xzf "$archive" -C "$dir" --strip-components 1

@@ -16,6 +16,7 @@ set -euo pipefail
 action="${1:?usage: scripts/release-manifest.sh download <folder> | publish <manifest.json>}"
 path="${2:?usage: scripts/release-manifest.sh download <folder> | publish <manifest.json>}"
 repo="${GITHUB_REPOSITORY:-NexusLocal/binaries}"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/download.sh"
 
 # The tag of the first manifest release is "manifest". Each later tag starts with "manifest-".
 # createdAt is the date of the commit. Two manifests of one commit have the same createdAt. So only
@@ -32,7 +33,7 @@ download)
         echo "error: no release has a manifest" >&2
         exit 3
     fi
-    gh release download "$tag" --repo "$repo" --pattern manifest.json --dir "$path" --clobber
+    try_twice gh release download "$tag" --repo "$repo" --pattern manifest.json --dir "$path" --clobber
     ;;
 publish)
     if [ "$(basename "$path")" != "manifest.json" ]; then

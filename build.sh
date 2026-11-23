@@ -31,6 +31,7 @@ if [ -z "$product" ] || [ ! -f "$repo/products/$product.sh" ]; then
 fi
 
 source "$repo/lib/env.sh"
+source "$repo/lib/download.sh"
 source "$repo/lib/fetch.sh"
 source "$repo/lib/toolchain.sh"
 source "$repo/lib/dependencies.sh"

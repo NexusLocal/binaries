@@ -3,6 +3,8 @@
 #
 # Needs curl and jq. It uses GH_TOKEN for the GitHub API when it is set.
 
+source "$root/lib/download.sh"
+
 pinned() {
     awk -v name="$1" '$1 == name { print $2 }' "$root/sources.lock"
 }
@@ -23,11 +25,11 @@ newer() {
 # token of the workflow has its own limit of 1,000 requests an hour.
 github_api() {
     if [ -n "${GH_TOKEN:-}" ]; then
-        curl -fsS --max-time 30 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/$1"
+        read_url --max-time 30 -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/$1"
         return
     fi
 
-    curl -fsS --max-time 30 "https://api.github.com/$1"
+    read_url --max-time 30 "https://api.github.com/$1"
 }
 
 github_latest() {
@@ -57,7 +59,7 @@ listed_latest() {
     local suffix
     suffix="$(awk -v name="$2" '$1 == name { print $4 }' "$root/sources.lock" | grep -oE '(tar\.[a-z0-9]+|tgz)$')"
 
-    curl -fsSL --max-time 30 "$1" | grep -oE "$2-[0-9]+(\.[0-9]+)+\.$suffix" | sed -E "s/^$2-//; s/\.$suffix$//" |
+    read_url --max-time 30 "$1" | grep -oE "$2-[0-9]+(\.[0-9]+)+\.$suffix" | sed -E "s/^$2-//; s/\.$suffix$//" |
         awk -v line="${3:-}" 'line == "" || index($0, line ".") == 1' | sort -V | tail -1
 }
 
@@ -65,7 +67,7 @@ listed_latest() {
 # pre-releases such as 100.0.0-alpha1. So only a version with three numbers counts. With a line
 # such as 100, only the versions of that line count.
 mongodb_tools_latest() {
-    curl -fsS --max-time 60 https://downloads.mongodb.org/tools/db/full.json |
+    read_url --max-time 60 https://downloads.mongodb.org/tools/db/full.json |
         jq -r '.versions[] | select(any(.downloads[]?; .name == "macos" and .arch == "arm64")) | .version' |
         grep -xE '[0-9]+\.[0-9]+\.[0-9]+' | awk -v line="${1:-}" 'line == "" || index($0, line ".") == 1' | sort -V | tail -1
 }

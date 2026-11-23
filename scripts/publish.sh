@@ -27,6 +27,8 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
+source "$root/lib/download.sh"
+
 entries="$work/entries.jsonl"
 : > "$entries"
 
@@ -35,9 +37,7 @@ lock_line() {
 }
 
 download_verified() {
-    local url="$1" sha256="$2" target="$3"
-    curl -fsSL --retry 8 --retry-connrefused -o "$target" "$url"
-    echo "$sha256  $target" | shasum -a 256 -c --status || { echo "error: SHA-256 mismatch for $url" >&2; exit 1; }
+    download_file "$1" "$3" "$2" || { echo "error: the download of $1 failed twice, or its SHA-256 does not match" >&2; exit 1; }
 }
 
 tag_revisions_highest_first() {
@@ -132,7 +132,7 @@ publish_package() {
 
     if [ -n "$newest" ]; then
         released="$work/released/$version-r$newest"
-        gh release download "$version-r$newest" --repo "$repo" --pattern "$base.json" --pattern "$base.sources.txt" --dir "$released" --clobber
+        try_twice gh release download "$version-r$newest" --repo "$repo" --pattern "$base.json" --pattern "$base.sources.txt" --dir "$released" --clobber
         identity="$(build_identity "$json")"
         released_identity="$(build_identity "$released/$base.json")"
 

@@ -40,12 +40,14 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 : > "$summary"
 
+source "$root/lib/download.sh"
+
 first_hex() {
     grep -oE '[0-9a-f]{64}' | sed -n 1p
 }
 
 fetch() {
-    curl -fsSL --max-time 600 --retry 4 --retry-connrefused -o "$2" "$1"
+    download_file "$1" "$2"
 }
 
 # The SHA-256 that upstream publishes for a file, or nothing. A WordPress archive gets its SHA-1
@@ -59,40 +61,40 @@ upstream_checksum() {
         https://github.com/*/releases/download/*)
             repo="$(echo "$url" | cut -d/ -f4-5)"
             tag="$(echo "$url" | cut -d/ -f8)"
-            gh api "repos/$repo/releases/tags/$tag" --jq ".assets[] | select(.name == \"$file\") | .digest" 2>/dev/null | sed 's/^sha256://'
+            try_twice gh api "repos/$repo/releases/tags/$tag" --jq ".assets[] | select(.name == \"$file\") | .digest" 2>/dev/null | sed 's/^sha256://'
             ;;
         https://nodejs.org/dist/*)
-            curl -fsS --max-time 60 "${url%/*}/SHASUMS256.txt" | awk -v file="$file" '$2 == file { print $1 }'
+            read_url --max-time 60 "${url%/*}/SHASUMS256.txt" | awk -v file="$file" '$2 == file { print $1 }'
             ;;
         https://www.php.net/distributions/*)
-            curl -fsS --max-time 60 "https://www.php.net/releases/index.php?json&version=$version" | jq -r --arg file "$file" '.source[]? | select(.filename == $file) | .sha256'
+            read_url --max-time 60 "https://www.php.net/releases/index.php?json&version=$version" | jq -r --arg file "$file" '.source[]? | select(.filename == $file) | .sha256'
             ;;
         https://ftp.postgresql.org/* | https://archive.apache.org/*)
-            curl -fsS --max-time 60 "$url.sha256" | first_hex
+            read_url --max-time 60 "$url.sha256" | first_hex
             ;;
         https://archive.mariadb.org/*)
-            curl -fsS --max-time 60 "${url%/*}/sha256sums.txt" | grep -E " \*?$file\$" | first_hex
+            read_url --max-time 60 "${url%/*}/sha256sums.txt" | grep -E " \*?$file\$" | first_hex
             ;;
         https://download.redis.io/*)
-            curl -fsS --max-time 60 https://raw.githubusercontent.com/redis/redis-hashes/master/README | grep " $file " | first_hex
+            read_url --max-time 60 https://raw.githubusercontent.com/redis/redis-hashes/master/README | grep " $file " | first_hex
             ;;
         https://getcomposer.org/*)
-            curl -fsS --max-time 60 "$url.sha256sum" | first_hex
+            read_url --max-time 60 "$url.sha256sum" | first_hex
             ;;
         https://downloads.wordpress.org/*)
-            curl -fsS --max-time 60 "$url.sha1" | grep -oE '[0-9a-f]{40}' | sed -n '1s/^/sha1:/p'
+            read_url --max-time 60 "$url.sha1" | grep -oE '[0-9a-f]{40}' | sed -n '1s/^/sha1:/p'
             ;;
         https://download.osgeo.org/postgis/*)
-            curl -fsS --max-time 60 "$url.md5" | grep -oE '[0-9a-f]{32}' | sed -n '1s/^/md5:/p'
+            read_url --max-time 60 "$url.md5" | grep -oE '[0-9a-f]{32}' | sed -n '1s/^/md5:/p'
             ;;
         https://go.dev/dl/*)
-            curl -fsS --max-time 60 'https://go.dev/dl/?mode=json&include=all' | jq -r --arg file "$file" '.[].files[] | select(.filename == $file) | .sha256'
+            read_url --max-time 60 'https://go.dev/dl/?mode=json&include=all' | jq -r --arg file "$file" '.[].files[] | select(.filename == $file) | .sha256'
             ;;
         https://fastdl.mongodb.org/tools/db/*)
-            curl -fsS --max-time 60 https://downloads.mongodb.org/tools/db/full.json | jq -r --arg url "$url" '[.versions[].downloads[]? | select(.archive.url == $url) | .archive.sha256] | unique | .[]'
+            read_url --max-time 60 https://downloads.mongodb.org/tools/db/full.json | jq -r --arg url "$url" '[.versions[].downloads[]? | select(.archive.url == $url) | .archive.sha256] | unique | .[]'
             ;;
         https://fastdl.mongodb.org/osx/*)
-            curl -fsS --max-time 120 https://downloads.mongodb.org/full.json | jq -r --arg url "$url" '[.versions[].downloads[]? | select(.archive.url == $url) | .archive.sha256] | unique | .[]'
+            read_url --max-time 120 https://downloads.mongodb.org/full.json | jq -r --arg url "$url" '[.versions[].downloads[]? | select(.archive.url == $url) | .archive.sha256] | unique | .[]'
             ;;
     esac
 }
@@ -108,7 +110,7 @@ checked_line() {
 
     # The URL of a project without releases has the whole commit. Its version is only the start.
     if [[ "$url" =~ /archive/([0-9a-f]{40})\. ]]; then
-        commit="$(gh api "repos/$(echo "$url" | cut -d/ -f4-5)/commits/$newest" --jq .sha 2>/dev/null | grep -xE '[0-9a-f]{40}')"
+        commit="$(try_twice gh api "repos/$(echo "$url" | cut -d/ -f4-5)/commits/$newest" --jq .sha 2>/dev/null | grep -xE '[0-9a-f]{40}')"
 
         if [ -z "$commit" ]; then
             echo "- failed: $name $newest. The commit could not be read." >> "$summary"
