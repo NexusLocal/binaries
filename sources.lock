@@ -11,7 +11,7 @@ headers-more 0.42 6f0e023e40149b19c8f9548a648ac53ac010e27829aee109abe88106609c04
 geoip2 3.4 ad72fc23348d715a330994984531fab9b3606e160483236737f9a4a6957d9452 https://github.com/leev/ngx_http_geoip2_module/archive/refs/tags/3.4.tar.gz
 libmaxminddb 1.14.1 ca5c87d41339f8bc4daabb53e8a9356b3c995f2d2419b85d7bff823b2ecc252d https://github.com/maxmind/libmaxminddb/releases/download/1.14.1/libmaxminddb-1.14.1.tar.gz
 njs 1.0.2 84a114499fa6878d3ec52b99c1cf2874a91eb0d915408f418a2b1279519f09ae https://github.com/nginx/njs/archive/refs/tags/1.0.2.tar.gz
-nginx 1.30.7 2565b5c837050e958f70fb0f73c48e2bca4542ad349fd356f46fb0c72610bc6e https://nginx.org/download/nginx-1.30.7.tar.gz
+nginx 1.30.8 f867314ada32e717b949930859656c48a72dc6657aec598db58af2f98a40e1c1 https://nginx.org/download/nginx-1.30.8.tar.gz
 m4 1.4.21 f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66 https://ftp.gnu.org/gnu/m4/m4-1.4.21.tar.xz
 autoconf 2.73 9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e https://ftp.gnu.org/gnu/autoconf/autoconf-2.73.tar.xz
 icu 79.1 06fa63ecb521048f8082f12ad988f6b678d90cbd88aafce24cbc94902b191d99 https://github.com/unicode-org/icu/releases/download/release-79.1/icu4c-79.1-sources.tgz
@@ -23,7 +23,7 @@ libjpeg-turbo 3.2.1 c27ad72a68da151177929aa969ae773a2da5ac2af9ce946079314fdac8ce
 libwebp 1.6.0 e4ab7009bf0629fd11982d4c2aa83964cf244cffba7347ecd39019a9e38c4564 https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz
 freetype 2.15.0 93cd47eb719c325107f2d3cf087d06299e944c3b48a40b55537302304dea1dd5 https://download.savannah.gnu.org/releases/freetype/freetype-2.15.0.tar.xz
 gettext 1.0 71132a3fb71e68245b8f2ac4e9e97137d3e5c02f415636eb508ae607bc01add7 https://ftp.gnu.org/gnu/gettext/gettext-1.0.tar.xz
-libyaml 0.2.6 43b393a117bd4fe39812fddc94e3d654359a3ae05653dcf0110a1122d1747e61 https://github.com/yaml/libyaml/releases/download/0.2.6/yaml-0.2.6.tar.gz
+libyaml 0.2.7 0c39256b8be0fc689f5c7bfdea1bc9f3fb1fd648468fd3cc6fd375e09ffb6f13 https://github.com/yaml/libyaml/releases/download/0.2.7/yaml-0.2.7.tar.gz
 gmp 6.3.0 a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898 https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz
 libmemcached 1.2.0 c42a29e9898ae2827b83d81e9a58ae9fa2889d9e72da79886920ba2d7e67df08 https://github.com/awesomized/libmemcached/archive/refs/tags/1.2.0.tar.gz
 php-8.5 8.5.13 607602acaf0c3061818e9916ec44a058e8b3d43959a83862b9cd3ec7bf5b785f https://www.php.net/distributions/php-8.5.13.tar.xz
@@ -39,7 +39,7 @@ pecl-yaml 2.3.0 bc8404807a3a4dc896b310af21a7f8063aa238424ff77f27eb6ffa88b5874b8a
 pecl-mailparse 3.2.0 cc5111ae17bfa36efcc5ef23dcf75b6501593ac264c196aad3e39cd4ad765332 https://pecl.php.net/get/mailparse-3.2.0.tgz
 pecl-memcached 3.4.0 c163434eb0da97c8f45c7ad41d979d381f8b81c49402b1b90b063987fb37972e https://pecl.php.net/get/memcached-3.4.0.tgz
 pecl-mongodb 2.5.8 64bcb151b4c5c3f17dc1dfd949a35aed2c10b6230332861a5ad7aa9cdff44b2a https://pecl.php.net/get/mongodb-2.5.8.tgz
-composer 2.11.2 dd158c0afd41d15fac89e1b4e47b5d42911fe316c3687cd5edac98319b25d028 https://getcomposer.org/download/2.11.2/composer.phar
+composer 2.11.3 04f8b003da4e3a2459056591fbfebd02b4dc3e5adeb158616b90cf55a65113ec https://getcomposer.org/download/2.11.3/composer.phar
 wp-cli 2.12.0 ce34ddd838f7351d6759068d09793f26755463b4a4610a5a5c0a97b68220d85c https://github.com/wp-cli/wp-cli/releases/download/v2.12.0/wp-cli-2.12.0.phar
 wordpress 7.1.5 cd44160a3fcce179fe170331132fcfc05e84e2f9284e2aad38df2aea6edaeab1 https://downloads.wordpress.org/release/wordpress-7.1.5.zip
 sqlite-database-integration 3.1.3 f6ce35e8419d0b9326221a907627d905e25c2a5ba2afc86492811f14c851efe0 https://downloads.wordpress.org/plugin/sqlite-database-integration.3.1.3.zip
@@ -77,7 +77,7 @@ postgresql-19 19.0 a89fd70efbad6a08c7dbed8d4872e3af30170d9e5ca9dc7906523be95b4e6
 pgvector 0.8.7 cac0b10c360f05b2d521200105ba3697e773d4cd3731f5a915a7e37ebe0bea85 https://github.com/pgvector/pgvector/archive/refs/tags/v0.8.7.tar.gz
 postgis 3.7.0 832bbf50f2b6f57fab053bc9676b3bfe641e5bf966cdcb28c7926f8d4b3c5e04 https://download.osgeo.org/postgis/source/postgis-3.7.0.tar.gz
 pgrouting 4.0.2 2faf31b178db969637c1f392ba3ba18fba8d5aed15bdc73fbb4a53a72c5d0f71 https://github.com/pgRouting/pgrouting/releases/download/v4.0.2/pgrouting-4.0.2.tar.gz
-geos 3.15.0 d5e5192a686d065eaed082de14dd26244c5c8e02bff16b2c6cce3265f648e00e https://download.osgeo.org/geos/geos-3.15.0.tar.bz2
+geos 3.15.1 8eb6dc2ea78b00c2f5109c6b0dba9e028c60bad42d7b1b0cc9952b12dc71f571 https://download.osgeo.org/geos/geos-3.15.1.tar.bz2
 proj 9.9.0 791a0610547eeabb17006cfd49cdbd2034f3240f47ed5e88a1031811f4e2bcf3 https://github.com/OSGeo/PROJ/releases/download/9.9.0/proj-9.9.0.tar.gz
 json-c 0.19-20260627 f17a6d7d265cf840dfd8f0f46a606d98c6b5b26dc7cfe27275d1546a213086c8 https://github.com/json-c/json-c/archive/refs/tags/json-c-0.19-20260627.tar.gz
 protobuf-c 1.5.2 e2c86271873a79c92b58fef7ebf8de1aa0df4738347a8bd5d4e65a80a16d0d24 https://github.com/protobuf-c/protobuf-c/releases/download/v1.5.2/protobuf-c-1.5.2.tar.gz
