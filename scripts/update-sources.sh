@@ -20,16 +20,19 @@
 #   - MongoDB and the MongoDB Database Tools: full.json of the downloads on downloads.mongodb.org
 #   - PostGIS: the .md5 file next to the archive, and the SHA-256 of two downloads
 #
-# Some sources have no upstream checksum: PECL, MySQL, nginx, GNU, FreeType, libpng, libwebp,
-# OpenLDAP, pkgconf, GEOS and the archives of GitHub tags and commits. Such a source is downloaded twice.
-# Both downloads must give the same SHA-256.
+# Some sources have no upstream checksum, but a PGP signature: MySQL, nginx, GNU, FreeType, libwebp
+# and OpenLDAP. The signature must verify with a key in keys/ (group 8, decision 8). A new key of a
+# publisher makes the update fail, until the owner checks the key and adds it to keys/.
+#
+# The other sources have neither: PECL, libpng, pkgconf, GEOS and the archives of GitHub tags and
+# commits. Such a source is downloaded twice. Both downloads must give the same SHA-256.
 #
 # A package with a source archive of its own (<name>-source) gets both in one update.
 #
 # The summary file gets one line for each update and one line for each update that failed. The
 # exit code is 0 also when an update failed, so the other updates still go out.
 #
-# Needs gh, jq, curl and shasum.
+# Needs gh, jq, curl, shasum and gpgv.
 
 set -uo pipefail
 
@@ -44,6 +47,31 @@ source "$root/lib/download.sh"
 
 first_hex() {
     grep -oE '[0-9a-f]{64}' | sed -n 1p
+}
+
+# The URL of the PGP signature of a source that has one.
+signature_url() {
+    case "$1" in
+        https://nginx.org/download/* | https://storage.googleapis.com/downloads.webmproject.org/* | https://www.openldap.org/software/download/* | https://cdn.mysql.com/*)
+            echo "$1.asc"
+            ;;
+        https://ftp.gnu.org/gnu/* | https://download.savannah.gnu.org/releases/*)
+            echo "$1.sig"
+            ;;
+    esac
+}
+
+# gpgv reads a keyring of binary keys. keys/ holds them as text.
+pinned_keyring() {
+    local keyring="$work/pinned-keys.gpg" key
+
+    if [ ! -s "$keyring" ]; then
+        for key in "$root"/keys/*.asc; do
+            gpg --dearmor < "$key" >> "$keyring"
+        done
+    fi
+
+    echo "$keyring"
 }
 
 fetch() {
@@ -103,7 +131,7 @@ upstream_checksum() {
 # the new line of sources.lock, a tab and the method of the check. A failure goes to the summary
 # and prints nothing.
 checked_line() {
-    local name="$1" current="$2" newest="$3" url new_url file sha256 expected method commit
+    local name="$1" current="$2" newest="$3" url new_url file sha256 expected method commit signature
 
     url="$(awk -v name="$name" '$1 == name { print $4 }' "$lock")"
     new_url="${url//$current/$newest}"
@@ -151,11 +179,20 @@ checked_line() {
             method="the MD5 of upstream, two downloads were the same"
             ;;
         "")
-            if ! fetch "$new_url" "$file.second" || [ "$(shasum -a 256 "$file.second" | cut -d' ' -f1)" != "$sha256" ]; then
+            signature="$(signature_url "$new_url")"
+
+            if [ -n "$signature" ]; then
+                if ! fetch "$signature" "$file.signature" || ! gpgv --keyring "$(pinned_keyring)" "$file.signature" "$file" > "$work/gpgv.txt" 2>&1; then
+                    echo "- failed: $name $newest. The PGP signature does not verify with a key in keys/: $(grep -oE 'using [A-Z]+ key [0-9A-F]+' "$work/gpgv.txt" | head -1)." >> "$summary"
+                    return
+                fi
+                method="the PGP signature of upstream"
+            elif ! fetch "$new_url" "$file.second" || [ "$(shasum -a 256 "$file.second" | cut -d' ' -f1)" != "$sha256" ]; then
                 echo "- failed: $name $newest. Two downloads gave a different file." >> "$summary"
                 return
+            else
+                method="no upstream checksum, two downloads were the same"
             fi
-            method="no upstream checksum, two downloads were the same"
             ;;
         *)
             if [ "$expected" != "$sha256" ]; then
