@@ -32,13 +32,19 @@ built from. A release that exists already never changes. A recipe sets `PACKAGE_
 when it changes and the upstream version stays the same. When only a source such as OpenSSL
 changes, `scripts/publish.sh` gives the package the next revision by itself.
 
-The Nexus app reads
-[`manifest.json`](https://github.com/NexusLocal/binaries/releases/latest/download/manifest.json),
-which lists every package with its version line, URL, SHA-256 and license. A release cannot change
-after it is published. So each manifest is a new release, and that release becomes the latest
-release. `scripts/release-manifest.sh` publishes it. Node, the MongoDB server, Composer and WP-CLI
-are in the manifest too. Nexus downloads them from nodejs.org, fastdl.mongodb.org, getcomposer.org
-and the GitHub releases of WP-CLI, with the SHA-256 from `sources.lock`.
+`manifest.json` lists every package with its version line, URL, SHA-256 and license. A release
+cannot change after it is published. So each manifest is a new release.
+`scripts/release-manifest.sh` adds it as a draft release that waits for the signature of the
+owner. `scripts/sign-manifest.sh` runs on the Mac of the owner. It shows the packages that changed,
+checks the SHA-256 of each one and the attestation of the workflow Build, and signs the bytes of
+`manifest.json` with an Ed25519 key in the Keychain. Then it publishes the draft as the latest
+release with
+[`manifest.signed.json`](https://github.com/NexusLocal/binaries/releases/latest/download/manifest.signed.json),
+which holds the same bytes and the signature. The Nexus app installs only from a manifest with a
+valid signature. Versions of Nexus before the signature read `manifest.json` of the same release.
+Node, the MongoDB server, Composer and WP-CLI are in the manifest too. Nexus downloads them from
+nodejs.org, fastdl.mongodb.org, getcomposer.org and the GitHub releases of WP-CLI, with the SHA-256
+from `sources.lock`.
 
 NexusLocal does not give out the MongoDB server 7.0, 8.0 and 9.0, because its license is the SSPL.
 The file of MongoDB is a `.tgz`. The manifest gives the format `tar.xz`, because an older Nexus
@@ -65,9 +71,11 @@ the choice `all`.
 
 The workflow Updates runs each day. `scripts/update-sources.sh` updates `sources.lock` to the
 newest release in each version line, and `support.lock` to the newest end of security fixes. It
-checks each download against the checksum that upstream publishes. Some sources have no such
-checksum: PECL, MySQL, nginx, GNU, FreeType, libpng, libwebp, OpenLDAP, pkgconf, GEOS and the archives of
-GitHub tags and commits. The script downloads such a source twice. Both downloads must be the same.
+checks each download against the checksum that upstream publishes. MySQL, nginx, GNU, FreeType,
+libwebp and OpenLDAP publish no checksum, but a PGP signature. The signature must verify with a key
+in [`keys/`](keys/README.md). Some sources have neither: PECL, libpng, pkgconf, GEOS and the
+archives of GitHub tags and commits. The script downloads such a source twice. Both downloads must
+be the same.
 
 A package with a source archive of its own (MySQL, Mailpit and cloudflared) gets both in one update.
 fmt gets the version that the newest MariaDB releases name in `cmake/libfmt.cmake`, in the same
@@ -75,12 +83,14 @@ update as MariaDB. ICU, libpng, OpenLDAP, APR and some other libraries stay in t
 `sources.lock`, for example OpenLDAP 2.6. The MongoDB Database Tools stay in their line 100 too.
 ngx_brotli has no releases. So it gets the newest commit.
 GMP, Boost and protobuf change rarely. So a person updates them. Then the workflow commits, pushes
-and starts the build. No person is needed for another update in a version line.
+and starts the build. Each new manifest then waits for the signature of the owner.
 
-The owner gets an issue, and so an email, in three cases:
+The owner gets an issue, and so an email, in four cases:
 
-- **Automatic update failed:** a download or a checksum failed, or a package has a new major
-  version.
+- **A manifest waits for its signature:** run `scripts/sign-manifest.sh`. One run signs the newest
+  draft, which holds the changes of each older draft.
+- **Automatic update failed:** a download, a checksum or a signature failed, or a package has a new
+  major version.
 - **Build failed:** a build, a test or a publication failed on `main`.
 - **New version line:** `scripts/check-lines.sh` found a new line upstream, for example PHP 8.6
   or Node.js 27. A new line needs a choice of the owner, so the workflow adds nothing.
