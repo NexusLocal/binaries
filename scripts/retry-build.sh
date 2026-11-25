@@ -4,7 +4,7 @@
 #
 #   GH_TOKEN=... scripts/retry-build.sh
 #
-# The daily Updates run calls it when no source has an update. Otherwise a change of a failed Build
+# The Updates run calls it when no source has an update. Otherwise a change of a failed Build
 # waits for the next push. Needs git with the full history, and gh.
 
 set -euo pipefail

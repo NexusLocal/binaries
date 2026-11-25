@@ -12,7 +12,8 @@ that build them. Each package is for macOS 27 on Apple silicon.
 - **Checked sources:** each source must match the checksum or the PGP signature of its publisher.
 - **Clean builds:** each build starts with an empty environment. Each package contains the license
   of each program in it. See [Rules](#rules).
-- **Up to date:** a workflow looks for new versions each day and builds the packages that changed.
+- **Up to date:** a workflow looks for new versions every 6 hours and builds the packages that
+  changed.
   See [Automatic updates](#automatic-updates).
 
 ## Build a package
@@ -80,7 +81,7 @@ the choice `all`.
 
 ## Automatic updates
 
-The workflow Updates runs each day. `scripts/update-sources.sh` updates `sources.lock` to the
+The workflow Updates runs every 6 hours. `scripts/update-sources.sh` updates `sources.lock` to the
 newest release in each version line, and `support.lock` to the newest end of security fixes. It
 checks each download against the checksum that upstream publishes. MySQL, nginx, GNU, FreeType,
 libwebp and OpenLDAP publish no checksum, but a PGP signature. The signature must verify with a key

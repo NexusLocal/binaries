@@ -1,12 +1,12 @@
 name: Updates
 
-# Each day: updates sources.lock and support.lock to the newest upstream release in each version
+# Every 6 hours: updates sources.lock and support.lock to the newest upstream release in each version
 # line, after a check of each download against the checksum of upstream (scripts/update-sources.sh).
 # A push with GITHUB_TOKEN starts no other workflow, so this workflow starts the build or the
 # manifest itself. A failed update and a new version line each get an issue for the owner.
 on:
   schedule:
-    - cron: "17 5 * * *"
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -101,4 +101,4 @@ jobs:
       - name: Close the old issue "Updates available"
         run: |
           number="$(gh issue list --state open --search 'in:title "Updates available"' --json number --jq '.[0].number')"
-          [ -z "$number" ] || gh issue close "$number" --comment "The Updates workflow now updates the sources itself each day."
+          [ -z "$number" ] || gh issue close "$number" --comment "The Updates workflow now updates the sources itself every 6 hours."
