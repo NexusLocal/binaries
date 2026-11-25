@@ -1,21 +1,32 @@
 # Nexus binaries
 
-Build scripts for the programs that the [Nexus](https://github.com/NexusLocal/nexus) app
-downloads: nginx, Apache, PHP, MySQL, MariaDB, PostgreSQL and Redis. Each package is built from
-source for macOS 27 on Apple silicon.
+The packages that the [Nexus](https://github.com/NexusLocal/nexus) app installs, and the scripts
+that build them. Each package is for macOS 27 on Apple silicon.
+
+- **Packages:** PHP 8.2 to 8.5, nginx, Apache, MySQL, MariaDB, PostgreSQL with pgvector and PostGIS,
+  Redis, Mailpit, cloudflared and the MongoDB Database Tools. See [Packages](#packages).
+- **From the publisher:** Node, the MongoDB server, Composer and WP-CLI. Nexus downloads them from
+  their publisher. The manifest gives the SHA-256 of each file.
+- **Signed:** the owner signs each manifest outside GitHub. Nexus installs nothing from a manifest
+  without a valid signature. See [Releases and the manifest](#releases-and-the-manifest).
+- **Checked sources:** each source must match the checksum or the PGP signature of its publisher.
+- **Clean builds:** each build starts with an empty environment. Each package contains the license
+  of each program in it. See [Rules](#rules).
+- **Up to date:** a workflow looks for new versions each day and builds the packages that changed.
+  See [Automatic updates](#automatic-updates).
 
 ## Build a package
 
 ```sh
 ./build.sh nginx
-tests/nginx.sh /tmp/nexus-build/out/nginx-1.30.6-macos-arm64.tar.xz
+tests/nginx.sh /tmp/nexus-build/out/nginx-*-macos-arm64.tar.xz
 
 ./build.sh php 8.5
-tests/php.sh /tmp/nexus-build/out/php-8.5.12-macos-arm64.tar.xz
-tests/wp-cli.sh /tmp/nexus-build/out/php-8.5.12-macos-arm64.tar.xz
+tests/php.sh /tmp/nexus-build/out/php-8.5.*-macos-arm64.tar.xz
+tests/wp-cli.sh /tmp/nexus-build/out/php-8.5.*-macos-arm64.tar.xz
 
 ./build.sh httpd
-tests/httpd.sh /tmp/nexus-build/out/httpd-2.4.70-macos-arm64.tar.xz
+tests/httpd.sh /tmp/nexus-build/out/httpd-*-macos-arm64.tar.xz
 ```
 
 The build uses `/tmp/nexus-build`. Set `NEXUS_BUILD_ROOT` to use another folder. The path must
