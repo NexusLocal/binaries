@@ -1,7 +1,7 @@
 name: Manifest
 
-# Publishes a new manifest with the support data of support.lock. A change of support.lock
-# needs no new build of the packages.
+# Adds a new manifest with the support data of support.lock as a draft that waits for the
+# signature of the owner. A change of support.lock needs no new build of the packages.
 on:
   workflow_dispatch:
   push:
@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
     concurrency:
       group: release
       cancel-in-progress: false
@@ -34,5 +35,5 @@ jobs:
         run: |
           scripts/release-manifest.sh download "$RUNNER_TEMP"
           scripts/support.sh "$RUNNER_TEMP/manifest.json"
-          scripts/release-manifest.sh publish "$RUNNER_TEMP/manifest.json"
+          scripts/release-manifest.sh draft "$RUNNER_TEMP/manifest.json"
           jq -r '.packages[] | "\(.name) \(.line): lts \(.lts), security fixes end on \(.security_end // "no date")"' "$RUNNER_TEMP/manifest.json"

@@ -11,9 +11,10 @@
 # files. Otherwise the package gets the next revision. So a package that the manifest names never
 # changes afterwards.
 #
-# scripts/release-manifest.sh publishes the manifest as a new release, which becomes the latest
-# release:
-# https://github.com/NexusLocal/binaries/releases/latest/download/manifest.json
+# scripts/release-manifest.sh adds the manifest as a draft release that waits for the signature of
+# the owner. scripts/sign-manifest.sh signs it on the Mac of the owner and publishes it as the
+# latest release:
+# https://github.com/NexusLocal/binaries/releases/latest/download/manifest.signed.json
 #
 # scripts/support.sh adds the support data of each version line from support.lock.
 #
@@ -306,10 +307,10 @@ jq -s --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg repository "$repo" 
 "$root/scripts/support.sh" "$work/manifest.json"
 
 if [ "${NEXUS_DRY_RUN:-}" = "1" ]; then
-    echo "[dry run] scripts/release-manifest.sh publish manifest.json" >&2
+    echo "[dry run] scripts/release-manifest.sh draft manifest.json" >&2
     cp "$work/manifest.json" "$dist/manifest.json"
 else
-    "$root/scripts/release-manifest.sh" publish "$work/manifest.json"
+    "$root/scripts/release-manifest.sh" draft "$work/manifest.json"
 fi
 
 echo "==> the manifest lists $(jq '.packages | length' "$work/manifest.json") packages"

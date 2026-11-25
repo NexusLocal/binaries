@@ -72,6 +72,10 @@ jobs:
     needs: plan
     if: ${{ needs.plan.outputs.packages != '[]' }}
     runs-on: xcode-27
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -94,6 +98,13 @@ jobs:
         env:
           NEXUS_BUILD_ROOT: ${{ runner.temp }}/nexus-build
         run: tests/${{ matrix.product == 'mariadb' && 'mysql' || matrix.product }}.sh "$NEXUS_BUILD_ROOT"/out/${{ matrix.name }}*-macos-arm64.tar.xz
+
+      # The attestation proves that this workflow made the package. scripts/sign-manifest.sh checks
+      # it on the Mac of the owner before the signature (group 8).
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+        with:
+          subject-path: ${{ runner.temp }}/nexus-build/out/${{ matrix.name }}*-macos-arm64.tar.xz
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -135,6 +146,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
     concurrency:
       group: release
       cancel-in-progress: false
