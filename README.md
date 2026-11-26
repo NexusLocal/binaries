@@ -47,8 +47,9 @@ changes, `scripts/publish.sh` gives the package the next revision by itself.
 `manifest.json` lists every package with its version line, URL, SHA-256 and license. A release
 cannot change after it is published. So each manifest is a new release.
 `scripts/release-manifest.sh` adds it as a draft release that waits for the signature of the
-owner. `scripts/sign-manifest.sh` runs on the Mac of the owner. It shows the packages that changed,
-checks the SHA-256 of each one and the attestation of the workflow Build, and signs the bytes of
+owner. `scripts/sign-manifest.sh` runs on the Mac of the owner. It shows the packages that changed
+with their revision and the sources that changed. It checks the SHA-256 of each package and the
+attestation of the workflow Build. When each check passes, it signs the bytes of
 `manifest.json` with an Ed25519 key in the Keychain. Then it publishes the draft as the latest
 release with
 [`manifest.signed.json`](https://github.com/NexusLocal/binaries/releases/latest/download/manifest.signed.json),

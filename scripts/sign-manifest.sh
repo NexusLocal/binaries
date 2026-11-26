@@ -6,7 +6,8 @@
 #   scripts/sign-manifest.sh
 #
 # 1. It downloads the newest draft and the manifest of the latest release.
-# 2. It shows each package that changed, with the old and the new version.
+# 2. It shows each package that changed, with the old and the new version and revision. For a
+#    package of this repository it also shows the sources that changed.
 # 3. It checks each changed package: its SHA-256, and for a package of this repository the
 #    attestation of the Build workflow. A package of upstream has no attestation.
 # 4. When each check passes, sign_update of Sparkle signs the bytes of manifest.json with the key
@@ -60,16 +61,91 @@ fi
 
 echo "==> $draft against ${latest:-no earlier manifest}"
 
-# One line for each package whose file changed: the key, the old and the new version, and the
-# fields that the check needs.
+# One line for each package whose file changed: the key, the old and the new version, the fields
+# that the check needs, the old and the new revision and the old URL. read joins two tabs into one,
+# so a value that is not there is "-".
 jq -r --slurpfile old "$work/old/manifest.json" '
     ($old[0].packages | map({key: "\(.name) \(.line)", value: .}) | from_entries) as $before
     | .packages[]
     | . as $new
     | ($before["\(.name) \(.line)"]) as $old
     | select(($old.sha256 // "") != .sha256)
-    | [.name, .line, ($old.version // "new"), .version, .url, .sha256, (if .upstream then "upstream" else "built" end)]
+    | [.name, .line, ($old.version // "new"), .version, .url, .sha256, (if .upstream then "upstream" else "built" end),
+       ($old.revision // "-" | tostring), (.revision // "-" | tostring), ($old.url // "-")]
     | @tsv' "$work/new/manifest.json" > "$work/changed.tsv"
+
+with_revision() {
+    if [ "$2" = "-" ]; then
+        echo "$1"
+        return
+    fi
+
+    echo "$1 r$2"
+}
+
+# The sources of a built package whose version changed between two releases, from the source list
+# of each release. The main source of the package is left out, because its version is the version
+# of the package.
+changed_sources() {
+    local old_url="$1" new_url="$2" old_version="$3" new_version="$4"
+
+    download_file "${old_url%.tar.xz}.sources.txt" "$work/sources.old" || return 0
+    download_file "${new_url%.tar.xz}.sources.txt" "$work/sources.new" || return 0
+
+    awk -v old_version="$old_version" -v new_version="$new_version" '
+        length($3) != 64 { next }
+        FNR == NR { before[$1] = $2; next }
+        { after[$1] = $2 }
+        END {
+            for (name in after) {
+                if (!(name in before)) {
+                    print name " " after[name] " is new"
+                } else if (before[name] != after[name] && !(before[name] == old_version && after[name] == new_version)) {
+                    print name " " before[name] " -> " after[name]
+                }
+            }
+
+            for (name in before) {
+                if (!(name in after)) {
+                    print name " " before[name] " is gone"
+                }
+            }
+        }' "$work/sources.old" "$work/sources.new" | sort | paste -sd ',' - | sed 's/,/, /g'
+}
+
+describe_change() {
+    local old="$1" new="$2" kind="$3" old_revision="$4" new_revision="$5" old_url="$6" url="$7" sources
+
+    if [ "$old" = "$new" ]; then
+        printf '%s -> r%s' "$(with_revision "$old" "$old_revision")" "$new_revision"
+    else
+        printf '%s -> %s' "$(with_revision "$old" "$old_revision")" "$(with_revision "$new" "$new_revision")"
+    fi
+
+    if [ "$kind" = "upstream" ]; then
+        echo " (upstream)"
+        return
+    fi
+
+    if [ "$old_url" = "-" ]; then
+        echo
+        return
+    fi
+
+    sources="$(changed_sources "$old_url" "$url" "$old" "$new")"
+
+    if [ -n "$sources" ]; then
+        echo " ($sources)"
+        return
+    fi
+
+    if [ "$old" = "$new" ]; then
+        echo " (the same sources)"
+        return
+    fi
+
+    echo
+}
 
 jq -r --slurpfile new "$work/new/manifest.json" '
     ($new[0].packages | map({key: "\(.name) \(.line)", value: .}) | from_entries) as $after
@@ -81,15 +157,15 @@ if [ ! -s "$work/changed.tsv" ] && [ ! -s "$work/removed.txt" ]; then
     echo "==> no package changed, only the support data"
 fi
 
-while IFS=$'\t' read -r name line old new url sha256 kind; do
-    echo "    $name $line: $old -> $new${kind/built/}"
+while IFS=$'\t' read -r name line old new url sha256 kind old_revision new_revision old_url; do
+    echo "    $name $line: $(describe_change "$old" "$new" "$kind" "$old_revision" "$new_revision" "$old_url" "$url")"
 done < "$work/changed.tsv"
 sed 's/^/    /' "$work/removed.txt"
 
 echo "==> the check of each changed package"
 problems=0
 
-while IFS=$'\t' read -r name line old new url sha256 kind; do
+while IFS=$'\t' read -r name line old new url sha256 kind _; do
     file="$work/packages/$(basename "$url")"
 
     if ! download_file "$url" "$file" "$sha256"; then
