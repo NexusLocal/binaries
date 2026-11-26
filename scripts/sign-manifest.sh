@@ -3,13 +3,13 @@
 # Signs the newest manifest that waits as a draft release, on the Mac of the owner (group 8), and
 # publishes it as the latest release:
 #
-#   scripts/sign-manifest.sh [--yes]
+#   scripts/sign-manifest.sh
 #
 # 1. It downloads the newest draft and the manifest of the latest release.
 # 2. It shows each package that changed, with the old and the new version.
 # 3. It checks each changed package: its SHA-256, and for a package of this repository the
 #    attestation of the Build workflow. A package of upstream has no attestation.
-# 4. After a yes, sign_update of Sparkle signs the bytes of manifest.json with the key
+# 4. When each check passes, sign_update of Sparkle signs the bytes of manifest.json with the key
 #    nexus-packages in the Keychain. manifest.signed.json holds the same bytes and the signature.
 # 5. It adds manifest.signed.json to the draft, publishes the draft as the latest release, deletes
 #    the older drafts and closes the issue "A manifest waits for its signature".
@@ -29,11 +29,6 @@ waiting_issue="A manifest waits for its signature"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/download.sh"
-
-yes=0
-if [ "${1:-}" = "--yes" ]; then
-    yes=1
-fi
 
 sign_update="${NEXUS_SIGN_UPDATE:-$(ls -t "$HOME"/Library/Developer/Xcode/DerivedData/*/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update 2>/dev/null | head -1)}"
 
@@ -119,16 +114,6 @@ done < "$work/changed.tsv"
 if [ "$problems" -gt 0 ]; then
     echo "error: $problems packages failed the check. Nothing is signed." >&2
     exit 1
-fi
-
-if [ "$yes" -ne 1 ]; then
-    printf "Sign %s and publish it as the latest release? Type yes: " "$draft"
-    read -r answer
-
-    if [ "$answer" != "yes" ]; then
-        echo "Nothing is signed."
-        exit 0
-    fi
 fi
 
 # sign_update can change a file whose name looks like release notes. A copy with a neutral name
