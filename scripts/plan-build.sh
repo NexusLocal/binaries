@@ -126,6 +126,9 @@ while read -r name; do
         wp-cli | wordpress | sqlite-database-integration) add_products "php" "$name" ;;
         go) add_products "mailpit cloudflared" "$name" ;;
         m4 | autoconf) add_products "php" "$name" ;;
+        # A new source of its own for one PHP version, such as pecl-xdebug-php86. No published
+        # package names it yet, so the PHP packages are made again.
+        pecl-*) add_products "php" "$name" ;;
         protobuf) add_products "postgresql" "$name" ;;
         *) changed_tools="$changed_tools $name" ;;
     esac

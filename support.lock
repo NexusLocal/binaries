@@ -27,6 +27,7 @@ php 8.2 no 2026-12-31
 php 8.3 no 2027-12-31
 php 8.4 no 2028-12-31
 php 8.5 no 2029-12-31
+php 8.6 no 2030-12-31
 postgresql 14 no 2026-11-12
 postgresql 15 no 2027-11-11
 postgresql 16 no 2028-11-09

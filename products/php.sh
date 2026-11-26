@@ -7,7 +7,7 @@ PHP_PREFIX=/var/empty/nexus/php
 # blake2b_final, so in a static link argon2 called the libsodium versions with a smaller struct
 # and overflowed its stack. ext/sodium provides PASSWORD_ARGON2I and PASSWORD_ARGON2ID itself.
 PHP_LIBRARIES="openssl icu oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype gettext libyaml gmp libmemcached openldap postgresql-18 imagemagick"
-PHP_EXTENSIONS="redis xdebug pcov apcu yaml imagick mailparse memcached mongodb"
+PHP_EXTENSIONS="igbinary redis xdebug pcov apcu yaml imagick mailparse memcached mongodb"
 
 # Revision 2 added mailparse. Revision 3 added the license of each program in the package.
 # Revision 4 added the licenses of the libraries in the source of PHP. Revision 5 adds gmp and
@@ -59,37 +59,53 @@ mongodb pecl-mongodb LICENSE
 mongodb-third-party pecl-mongodb THIRD_PARTY_NOTICES
 "
 
-# igbinary 3.2.16 is the newest stable release and does not compile against PHP 8.5, which
-# moved php_smart_string.h. Only the release candidate 3.2.17RC1 supports PHP 8.5.
-igbinary_source() {
-    if [ "$1" = "8.5" ]; then
-        echo pecl-igbinary-rc
+# The source of an extension for one PHP version. A line pecl-<name>-php<version>, for example
+# pecl-xdebug-php86, is for an extension whose releases do not support that PHP version yet. It
+# follows a test release or git until a release does (scripts/check-updates.sh). The other PHP
+# versions use pecl-<name>.
+php_source() {
+    local own="pecl-$2-php${1//./}"
+
+    if source_field "$own" 1 > /dev/null; then
+        echo "$own"
         return
     fi
 
-    echo pecl-igbinary
+    echo "pecl-$2"
+}
+
+# The folder of an unpacked extension source.
+php_source_dir() {
+    local source_name
+    source_name="$(php_source "$1" "$2")"
+    echo "$WORK_DIR/$source_name-$(source_version "$source_name")"
 }
 
 add_php_licenses() {
-    local package="$1" src="$2" minor="$3" name source_name file
+    local package="$1" src="$2" minor="$3" name source_name file dir
 
     add_license "$package" php "$src/LICENSE"
 
     while read -r name source_name file; do
         [ -n "$name" ] || continue
-        add_license "$package" "$name" "$WORK_DIR/$source_name-$(source_version "$source_name")/$file"
+
+        case "$source_name" in
+            pecl-*) dir="$(php_source_dir "$minor" "${source_name#pecl-}")" ;;
+            *) dir="$WORK_DIR/$source_name-$(source_version "$source_name")" ;;
+        esac
+
+        add_license "$package" "$name" "$dir/$file"
     done <<< "$PHP_LICENSES"
 
-    source_name="$(igbinary_source "$minor")"
-    add_license "$package" igbinary "$WORK_DIR/$source_name-$(source_version "$source_name")/COPYING"
+    add_license "$package" igbinary "$(php_source_dir "$minor" igbinary)/COPYING"
 
     # libmemcached 1.0.18 had this notice in md5.cc. Later versions have the same code without it.
     add_license "$package" libmemcached-md5 "$NEXUS_REPO/licenses/libmemcached-md5.txt"
 
     add_license_from_comment "$package" memcached-g-fmt \
-        "$WORK_DIR/pecl-memcached-$(source_version pecl-memcached)/g_fmt.c" "Permission to use"
+        "$(php_source_dir "$minor" memcached)/g_fmt.c" "Permission to use"
 
-    add_mongodb_notices "$package"
+    add_mongodb_notices "$package" "$minor"
     add_php_source_licenses "$package" "$src" "$minor"
 }
 
@@ -99,7 +115,7 @@ add_php_licenses() {
 # built, and the files for Windows are empty on macOS.
 add_mongodb_notices() {
     local package="$1" src
-    src="$WORK_DIR/pecl-mongodb-$(source_version pecl-mongodb)"
+    src="$(php_source_dir "$2" mongodb)"
 
     add_license "$package" jsonsl "$NEXUS_REPO/licenses/jsonsl.txt"
 
@@ -116,7 +132,11 @@ add_mongodb_notices() {
 add_php_source_licenses() {
     local package="$1" src="$2" minor="$3" ir="$2/ext/opcache/jit/ir" dynasm
 
-    add_license "$package" zend "$src/Zend/LICENSE"
+    # From PHP 8.6 on, the LICENSE of PHP also covers the Zend Engine.
+    case "$minor" in
+        8.2|8.3|8.4|8.5) add_license "$package" zend "$src/Zend/LICENSE" ;;
+    esac
+
     add_license "$package" zend-asm "$src/Zend/asm/LICENSE"
     add_license "$package" tsrm "$src/TSRM/LICENSE"
     add_license "$package" php-fpm "$src/sapi/fpm/LICENSE"
@@ -221,10 +241,49 @@ build_pecl_extension() {
     )
 }
 
-build_product() {
-    local minor="${1:-}" source_name version src install package opcache=""
+build_extension() {
+    local package="$1" source_name
+    source_name="$(php_source "$2" "$3")"
 
-    [ -n "$minor" ] || fail "usage: ./build.sh php <8.2|8.3|8.4|8.5>"
+    case "$3" in
+        redis)
+            build_pecl_extension "$package" "$source_name" --enable-redis-igbinary --disable-redis-lz4 --disable-redis-zstd
+            ;;
+        yaml)
+            build_pecl_extension "$package" "$source_name" --with-yaml="$STAGE_DIR"
+            ;;
+        imagick)
+            PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" "$source_name" --with-imagick="$STAGE_DIR"
+            ;;
+        memcached)
+            # libmemcached is C++. Its pkg-config file does not name the C++ library.
+            LDFLAGS="$LDFLAGS -lc++" build_pecl_extension "$package" "$source_name" \
+                --with-libmemcached-dir="$STAGE_DIR" --with-zlib-dir="$SDK_DIR/usr" \
+                --disable-memcached-sasl --enable-memcached-igbinary
+            ;;
+        mongodb)
+            PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" "$source_name" \
+                --with-mongodb-ssl=openssl --with-mongodb-zlib=system --with-mongodb-utf8proc=bundled \
+                --with-mongodb-client-side-encryption=no --with-mongodb-sasl=no --with-mongodb-snappy=no --with-mongodb-zstd=no
+            ;;
+        *)
+            build_pecl_extension "$package" "$source_name"
+            ;;
+    esac
+}
+
+# PHP 8.6 changed its license from the PHP License 3.01 to the BSD 3-Clause license.
+php_license() {
+    case "$1" in
+        8.2|8.3|8.4|8.5) echo "PHP-3.01" ;;
+        *) echo "BSD-3-Clause" ;;
+    esac
+}
+
+build_product() {
+    local minor="${1:-}" source_name version src install package opcache="" name
+
+    [ -n "$minor" ] || fail "usage: ./build.sh php <8.2|8.3|8.4|8.5|8.6>"
     source_name="php-$minor"
     version="$(source_version "$source_name")"
 
@@ -233,9 +292,10 @@ build_product() {
     src="$(unpack "$source_name")"
     install="$WORK_DIR/php-install-$version"
 
-    if [ "$minor" != "8.5" ]; then
-        opcache="--enable-opcache"
-    fi
+    # From PHP 8.5 on, opcache is always built in.
+    case "$minor" in
+        8.2|8.3|8.4) opcache="--enable-opcache" ;;
+    esac
 
     log "Configuring PHP $version"
     (
@@ -314,27 +374,13 @@ build_product() {
         *) fail "php-config --extension-dir does not give a folder in the package" ;;
     esac
 
-    build_pecl_extension "$package" "$(igbinary_source "$minor")"
-    build_pecl_extension "$package" pecl-redis --enable-redis-igbinary --disable-redis-lz4 --disable-redis-zstd
-    build_pecl_extension "$package" pecl-xdebug
-    build_pecl_extension "$package" pecl-pcov
-    build_pecl_extension "$package" pecl-apcu
-    build_pecl_extension "$package" pecl-yaml --with-yaml="$STAGE_DIR"
-    PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" pecl-imagick --with-imagick="$STAGE_DIR"
-    build_pecl_extension "$package" pecl-mailparse
-
-    # libmemcached is C++. Its pkg-config file does not name the C++ library.
-    LDFLAGS="$LDFLAGS -lc++" build_pecl_extension "$package" pecl-memcached \
-        --with-libmemcached-dir="$STAGE_DIR" --with-zlib-dir="$SDK_DIR/usr" \
-        --disable-memcached-sasl --enable-memcached-igbinary
-
-    PKG_CONFIG="pkg-config --static" build_pecl_extension "$package" pecl-mongodb \
-        --with-mongodb-ssl=openssl --with-mongodb-zlib=system --with-mongodb-utf8proc=bundled \
-        --with-mongodb-client-side-encryption=no --with-mongodb-sasl=no --with-mongodb-snappy=no --with-mongodb-zstd=no
+    for name in $PHP_EXTENSIONS; do
+        build_extension "$package" "$minor" "$name"
+    done
 
     add_php_licenses "$package" "$src" "$minor"
-    write_source_file "$package" "$source_name" $PHP_LIBRARIES "$(igbinary_source "$minor")" \
-        $(for name in $PHP_EXTENSIONS; do echo "pecl-$name"; done)
+    write_source_file "$package" "$source_name" $PHP_LIBRARIES \
+        $(for name in $PHP_EXTENSIONS; do php_source "$minor" "$name"; done)
 
-    PACKAGE_REVISION="$PHP_REVISION" archive_package php "$version" "PHP-3.01"
+    PACKAGE_REVISION="$PHP_REVISION" archive_package php "$version" "$(php_license "$minor")"
 }

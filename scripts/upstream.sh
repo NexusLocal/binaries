@@ -71,3 +71,127 @@ mongodb_tools_latest() {
         jq -r '.versions[] | select(any(.downloads[]?; .name == "macos" and .arch == "arm64")) | .version' |
         grep -xE '[0-9]+\.[0-9]+\.[0-9]+' | awk -v line="${1:-}" 'line == "" || index($0, line ".") == 1' | sort -V | tail -1
 }
+
+# The newest release of a PECL extension. The state stable gives only stable releases. The state
+# latest also gives an alpha, a beta or a release candidate.
+pecl_release() {
+    read_url --max-time 30 "https://pecl.php.net/rest/r/$1/$2.txt"
+}
+
+# The GitHub project of each PECL extension. A source that follows git reads its commits and tags
+# there.
+pecl_repository() {
+    case "$1" in
+        igbinary) echo igbinary/igbinary ;;
+        redis) echo phpredis/phpredis ;;
+        xdebug) echo xdebug/xdebug ;;
+        pcov) echo krakjoe/pcov ;;
+        apcu) echo krakjoe/apcu ;;
+        yaml) echo php/pecl-file_formats-yaml ;;
+        imagick) echo Imagick/imagick ;;
+        mailparse) echo php/pecl-mail-mailparse ;;
+        memcached) echo php-memcached-dev/php-memcached ;;
+        mongodb) echo mongodb/mongo-php-driver ;;
+    esac
+}
+
+# The PECL name of a source, for example xdebug of pecl-xdebug-php86.
+pecl_name() {
+    echo "$1" | sed -E 's/^pecl-//; s/-php[0-9]+$//'
+}
+
+# The version of a source that follows git is the start of its commit.
+is_commit_version() {
+    [[ "$1" =~ ^[0-9a-f]{12}$ ]]
+}
+
+is_test_release() {
+    [[ "$1" =~ (alpha|beta|RC|rc)[0-9]*$ ]]
+}
+
+# The tag of a release in the GitHub project: the version, or the version with a v before it.
+release_tag() {
+    local tag
+
+    for tag in "$2" "v$2"; do
+        if github_api "repos/$1/git/matching-refs/tags/$tag" | jq -e --arg ref "refs/tags/$tag" 'any(.[]; .ref == $ref)' > /dev/null; then
+            echo "$tag"
+            return
+        fi
+    done
+}
+
+# ahead when the second commit or tag comes after the first in git, also identical, behind or
+# diverged.
+compare_status() {
+    github_api "repos/$1/compare/$2...$3" | jq -r .status
+}
+
+# The next version of a PECL source that is on a test release or on a commit (owner, 2026-11-26).
+# This is the case while no release supports a PHP version, for example pecl-xdebug-php86. The
+# order:
+#
+#   1. the newest stable release, when its tag is the version in use or comes after it in git
+#   2. the newest test release, under the same condition
+#   3. the newest commit of the default branch, when it comes after the version in use
+#
+# The default branch is the one that GitHub gives, so main, master or another name. After step 1
+# the source is on a stable release. scripts/check-updates.sh then reads only releases for it, so
+# it never goes back to git. Prints nothing when there is no next version, and fails when GitHub
+# or PECL did not answer.
+follow_next() {
+    local name="$1" current pecl repo base stable latest candidate tag head status
+    current="$(pinned "$name")"
+    pecl="$(pecl_name "$name")"
+    repo="$(pecl_repository "$pecl")"
+    [ -n "$repo" ] || return 1
+
+    if is_commit_version "$current"; then
+        base="$current"
+    else
+        base="$(release_tag "$repo" "$current")"
+        [ -n "$base" ] || return 1
+    fi
+
+    stable="$(pecl_release "$pecl" stable)" || return 1
+    latest="$(pecl_release "$pecl" latest)" || return 1
+
+    for candidate in "$stable" "$latest"; do
+        [ -n "$candidate" ] && [ "$candidate" != "$current" ] || continue
+        tag="$(release_tag "$repo" "$candidate")"
+        [ -n "$tag" ] || continue
+        status="$(compare_status "$repo" "$base" "$tag")" || return 1
+
+        case "$status" in
+            ahead | identical)
+                echo "$candidate"
+                return
+                ;;
+        esac
+    done
+
+    head="$(github_api "repos/$repo/commits/HEAD" | jq -r .sha)"
+    [[ "$head" =~ ^[0-9a-f]{40}$ ]] || return 1
+    status="$(compare_status "$repo" "$base" "$head")" || return 1
+
+    if [ "$status" = "ahead" ]; then
+        echo "${head:0:12}"
+    fi
+}
+
+# The download URL of a version of a PECL source: a release on pecl.php.net, or a commit as an
+# archive on GitHub.
+pecl_url() {
+    local pecl repo sha
+    pecl="$(pecl_name "$1")"
+
+    if ! is_commit_version "$2"; then
+        echo "https://pecl.php.net/get/$pecl-$2.tgz"
+        return
+    fi
+
+    repo="$(pecl_repository "$pecl")"
+    sha="$(github_api "repos/$repo/commits/$2" | jq -r .sha)"
+    [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || return 1
+    echo "https://github.com/$repo/archive/$sha.tar.gz"
+}

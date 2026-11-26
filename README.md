@@ -3,7 +3,7 @@
 The packages that the [Nexus](https://github.com/NexusLocal/nexus) app installs, and the scripts
 that build them. Each package is for macOS 27 on Apple silicon.
 
-- **Packages:** PHP 8.2 to 8.5, nginx, Apache, MySQL, MariaDB, PostgreSQL with pgvector and PostGIS,
+- **Packages:** PHP 8.2 to 8.6, nginx, Apache, MySQL, MariaDB, PostgreSQL with pgvector and PostGIS,
   Redis, Mailpit, cloudflared and the MongoDB Database Tools. See [Packages](#packages).
 - **From the publisher:** Node, the MongoDB server, Composer and WP-CLI. Nexus downloads them from
   their publisher. The manifest gives the SHA-256 of each file.
@@ -22,9 +22,9 @@ that build them. Each package is for macOS 27 on Apple silicon.
 ./build.sh nginx
 tests/nginx.sh /tmp/nexus-build/out/nginx-*-macos-arm64.tar.xz
 
-./build.sh php 8.5
-tests/php.sh /tmp/nexus-build/out/php-8.5.*-macos-arm64.tar.xz
-tests/wp-cli.sh /tmp/nexus-build/out/php-8.5.*-macos-arm64.tar.xz
+./build.sh php 8.6
+tests/php.sh /tmp/nexus-build/out/php-8.6.*-macos-arm64.tar.xz
+tests/wp-cli.sh /tmp/nexus-build/out/php-8.6.*-macos-arm64.tar.xz
 
 ./build.sh httpd
 tests/httpd.sh /tmp/nexus-build/out/httpd-*-macos-arm64.tar.xz
@@ -95,6 +95,21 @@ fmt gets the version that the newest MariaDB releases name in `cmake/libfmt.cmak
 update as MariaDB. ICU, libpng, OpenLDAP, APR and some other libraries stay in their version line of
 `sources.lock`, for example OpenLDAP 2.6. The MongoDB Database Tools stay in their line 100 too.
 ngx_brotli has no releases. So it gets the newest commit.
+
+A PECL extension on a stable release follows its stable releases. An extension without a release
+for a PHP version gets a source of its own for that version, for example `pecl-xdebug-php86`. Such a
+source is on a test release or on a commit, and it takes in this order:
+
+1. the newest stable release, when its tag is the version in use or comes after it in git
+2. the newest test release (alpha, beta or RC), under the same condition
+3. the newest commit of the default branch of the project, when it comes after the version in use
+
+After step 1 the source follows only stable releases, so it never goes back to git. When the shared
+source, for example `pecl-xdebug`, has the same version, the source of its own goes away. Then each
+PHP version uses the shared source. `scripts/upstream.sh` has this rule in `follow_next`. igbinary
+follows the same rule for all PHP versions, because its newest release is from 2024 and git has
+fixes since then.
+
 GMP, Boost and protobuf change rarely. So a person updates them. Then the workflow commits, pushes
 and starts the build. Each new manifest then waits for the signature of the owner.
 
@@ -142,7 +157,7 @@ The owner gets an issue, and so an email, in four cases:
 | Package | Versions | State |
 | --- | --- | --- |
 | nginx | 1.30 | Static OpenSSL 3.5, PCRE2 and zlib. Dynamic modules: stream, mail, headers-more, brotli, geoip2 and njs. |
-| PHP | 8.2, 8.3, 8.4, 8.5 | CLI and FPM. See [PHP](#php). |
+| PHP | 8.2, 8.3, 8.4, 8.5, 8.6 | CLI and FPM. See [PHP](#php). |
 | Apache httpd | 2.4 | All modules as shared modules, the event, worker and prefork MPMs, mod_ssl and mod_http2. APR and APR-util are shared libraries in the package. Not included: mod_lua, mod_md and the LDAP modules. |
 | Redis | 7.2, 8.2, newest 8 | redis-server, redis-cli and redis-benchmark, without TLS. 7.2 has the BSD license. Redis 8 is given out under the AGPLv3, one of its three licenses. 7.4 is not built, because its only licenses are RSALv2 and SSPLv1. |
 | Mailpit | 1 | The official darwin-arm64 binary of Mailpit, repackaged as tar.xz with its MIT license and the licenses of its Go modules and npm packages. Nexus uses it to catch the mail of the local sites. |
@@ -160,8 +175,8 @@ The owner gets an issue, and so an email, in four cases:
   sockets, sodium, sqlite3, tokenizer, xml, xmlreader, xmlwriter, xsl, zip and zlib.
 - **Shared, turned on in php.ini:** apcu, gmp, igbinary, imagick, mailparse, memcached (with
   igbinary, without SASL), mongodb (with OpenSSL and zlib, without client-side encryption), pcov,
-  pgsql, pdo_pgsql, redis (with igbinary), xdebug, yaml, and opcache for 8.2 to 8.4. In 8.5 opcache
-  is always built in. pgsql and pdo_pgsql contain a static libpq 18 with its own OpenSSL. imagick
+  pgsql, pdo_pgsql, redis (with igbinary), xdebug, yaml, and opcache for 8.2 to 8.4. From 8.5 on
+  opcache is always built in. pgsql and pdo_pgsql contain a static libpq 18 with its own OpenSSL. imagick
   contains a static ImageMagick 7 with PNG, JPEG, WebP and FreeType, built with zero configuration.
   memcached contains a static libmemcached. mongodb contains libmongoc from its own source.
 - **From macOS:** libxml2, libxslt, curl, sqlite, libedit, iconv, zlib and bzip2.
@@ -179,8 +194,11 @@ Known choices:
 - **No libargon2:** libsodium and libargon2 both export `blake2b_init`, `blake2b_update` and
   `blake2b_final`. In a static link that made Argon2 overflow its stack. ext/sodium provides
   `PASSWORD_ARGON2I` and `PASSWORD_ARGON2ID` itself.
-- **igbinary for PHP 8.5:** 3.2.16 is the newest stable release, and it does not compile
-  against PHP 8.5. PHP 8.5 uses the release candidate 3.2.17RC1 until a stable release exists.
+- **Extensions from git or a test release:** igbinary for all PHP versions, and for PHP 8.6 also
+  Xdebug, Redis, pcov, APCu, YAML, Imagick and memcached. Their releases do not support PHP 8.6
+  yet. Each one moves to a release by itself, see [Automatic updates](#automatic-updates).
+- **The license of PHP 8.6:** the BSD 3-Clause license. PHP 8.2 to 8.5 have the PHP License 3.01.
+  From PHP 8.6 on, that LICENSE also covers the Zend Engine.
 - **ImageMagick formats:** no TIFF, HEIC, JPEG XL, color profiles (lcms) or SVG rendering. Each
   one needs another library in the package.
 

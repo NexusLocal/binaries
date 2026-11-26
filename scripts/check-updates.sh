@@ -53,8 +53,27 @@ endoflife_latest() {
     read_url --max-time 30 "https://endoflife.date/api/$1.json" | jq -r --arg cycle "$2" '.[] | select(.cycle == $cycle) | .latest'
 }
 
-pecl_latest() {
-    read_url --max-time 30 "https://pecl.php.net/rest/r/$1/stable.txt"
+# A PECL source on a stable release follows the stable releases. A source on a test release or on a
+# commit follows the rule of follow_next in scripts/upstream.sh.
+report_pecl() {
+    local name="$1" current next
+    current="$(pinned "$name")"
+
+    if ! is_commit_version "$current" && ! is_test_release "$current"; then
+        report "$name" "$(pecl_release "$(pecl_name "$name")" stable)"
+        return
+    fi
+
+    if ! next="$(follow_next "$name")"; then
+        echo "- $name: the newest version could not be read"
+        return
+    fi
+
+    if [ -n "$next" ]; then
+        echo "- $name: $current -> $next"
+    elif [ "${NEXUS_SHOW_ALL:-}" = "1" ]; then
+        echo "  $name: $current is the newest"
+    fi
 }
 
 node_latest() {
@@ -76,7 +95,7 @@ mongodb_releases() {
         jq -r '.versions[] | select(.production_release and any(.downloads[]?; .target == "macos" and .arch == "arm64" and .edition == "base")) | .version'
 }
 
-for line in 8.2 8.3 8.4 8.5; do report "php-$line" "$(endoflife_latest php "$line")"; done
+for line in 8.2 8.3 8.4 8.5 8.6; do report "php-$line" "$(endoflife_latest php "$line")"; done
 for line in 8.0 8.4 9.7; do report "mysql-$line" "$(endoflife_latest mysql "$line")"; done
 
 # The build of MariaDB stops when fmt in sources.lock is not the fmt of the MariaDB release. So
@@ -153,7 +172,7 @@ report autoconf "$(listed_latest https://ftp.gnu.org/gnu/autoconf/ autoconf "$(p
 report cmake "$(github_latest Kitware/CMake)"
 report ninja "$(github_latest ninja-build/ninja)"
 report go "$(read_url --max-time 30 'https://go.dev/dl/?mode=json' | jq -r '.[0].version' | sed 's/^go//')"
-for extension in xdebug pcov redis apcu yaml imagick mailparse memcached mongodb; do report "pecl-$extension" "$(pecl_latest "$extension")"; done
+for name in $(awk '$1 ~ /^pecl-/ { print $1 }' "$root/sources.lock"); do report_pecl "$name"; done
 
 # The last day of security fixes in support.lock, against endoflife.date. The LTS flags are not
 # compared: endoflife.date gives a date for some of them, and the decision record sets them.
@@ -187,7 +206,7 @@ report_support() {
     fi
 }
 
-for line in 8.2 8.3 8.4 8.5; do report_support php "$line" "$(endoflife_end php "$line")"; done
+for line in 8.2 8.3 8.4 8.5 8.6; do report_support php "$line" "$(endoflife_end php "$line")"; done
 for line in 8.0 8.4 9.7; do report_support mysql "$line" "$(endoflife_end mysql "$line")"; done
 for line in 10.11 11.4 11.8 12.3; do report_support mariadb "$line" "$(endoflife_end mariadb "$line")"; done
 for line in 14 15 16 17 18 19; do report_support postgresql "$line" "$(endoflife_end postgresql "$line")"; done

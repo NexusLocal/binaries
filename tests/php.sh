@@ -159,6 +159,18 @@ echo "  GMP ", GMP_VERSION, "\n";
 '
 otool -L "$extensions/gmp.so" | grep "@rpath/libgmp" > /dev/null || { echo "error: gmp.so does not use the shared library of GMP" >&2; exit 1; }
 
+echo "==> igbinary stores a nested value and reads it back"
+"$php" -n -d "extension_dir=$extensions" -d extension=igbinary -r '
+$value = ["name" => "shop", "items" => [1, 2.5, true, null, ["deep" => str_repeat("x", 300)]], "when" => new DateTimeImmutable("2026-11-26 10:00:00")];
+$copy = igbinary_unserialize(igbinary_serialize($value));
+
+if ($copy != $value) {
+    fwrite(STDERR, "error: igbinary did not give the same value back\n");
+    exit(1);
+}
+echo "  igbinary ", phpversion("igbinary"), "\n";
+'
+
 echo "==> memcached stores a value with igbinary on a server that speaks the text protocol"
 "$php" -n -d "extension_dir=$extensions" -d extension=igbinary -d extension=memcached -r '
 $server = stream_socket_server("tcp://127.0.0.1:0");
@@ -288,11 +300,13 @@ linked="$(otool -L "$extensions/mongodb.so")"
 
 licenses="php openssl icu libintl oniguruma libsodium libzip libpng libjpeg-turbo libwebp freetype
 libyaml openldap libpq imagemagick igbinary redis xdebug pcov apcu yaml imagick mailparse gmp gmp-gpl
-libmemcached libmemcached-md5 memcached fastlz memcached-g-fmt zend zend-asm tsrm php-fpm libbcmath timelib libmagic
+libmemcached libmemcached-md5 memcached fastlz memcached-g-fmt zend-asm tsrm php-fpm libbcmath timelib libmagic
 libmbfl libavifinfo pcre2 libgd xxhash dynasm mongodb mongodb-third-party mongodb-source-notices jsonsl"
+# From PHP 8.6 on, the LICENSE of PHP also covers the Zend Engine. So it has no zend license.
 case "$(basename "$root")" in
-    php-8.2.*|php-8.3.*) ;;
-    php-8.4.*) licenses="$licenses opcache-jit-ir lexbor lexbor-notice" ;;
+    php-8.2.*|php-8.3.*) licenses="$licenses zend" ;;
+    php-8.4.*) licenses="$licenses zend opcache-jit-ir lexbor lexbor-notice" ;;
+    php-8.5.*) licenses="$licenses zend opcache-jit-ir lexbor lexbor-notice uriparser" ;;
     *) licenses="$licenses opcache-jit-ir lexbor lexbor-notice uriparser" ;;
 esac
 missing=""

@@ -43,7 +43,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 : > "$summary"
 
-source "$root/lib/download.sh"
+source "$root/scripts/upstream.sh"
 
 first_hex() {
     grep -oE '[0-9a-f]{64}' | sed -n 1p
@@ -136,8 +136,17 @@ checked_line() {
     url="$(awk -v name="$name" '$1 == name { print $4 }' "$lock")"
     new_url="${url//$current/$newest}"
 
-    # The URL of a project without releases has the whole commit. Its version is only the start.
-    if [[ "$url" =~ /archive/([0-9a-f]{40})\. ]]; then
+    # A PECL source can move from a commit to a release and back. So its URL comes from its new
+    # version, not from the old URL. The URL of a project without releases has the whole commit.
+    # Its version is only the start.
+    if [[ "$name" == pecl-* ]]; then
+        new_url="$(pecl_url "$name" "$newest")"
+
+        if [ -z "$new_url" ]; then
+            echo "- failed: $name $newest. The commit could not be read." >> "$summary"
+            return
+        fi
+    elif [[ "$url" =~ /archive/([0-9a-f]{40})\. ]]; then
         commit="$(try_twice gh api "repos/$(echo "$url" | cut -d/ -f4-5)/commits/$newest" --jq .sha 2>/dev/null | grep -xE '[0-9a-f]{40}')"
 
         if [ -z "$commit" ]; then
@@ -218,9 +227,12 @@ update_source() {
     # line, and scripts/check-lines.sh reports it. A new major version of a PECL extension can drop a
     # PHP version or break the library of a site. cloudflared is not in this list. Its version starts
     # with the year. Its one line 1 takes each release.
+    # A PECL source that moves to or from a commit has no major version to compare.
     case "$name" in
         mailpit | composer | wp-cli | redis-8 | pecl-*)
-            if [ "${newest%%.*}" != "${current%%.*}" ]; then
+            if is_commit_version "$current" || is_commit_version "$newest"; then
+                :
+            elif [ "${newest%%.*}" != "${current%%.*}" ]; then
                 echo "- $name: $newest is a new major version. It needs the choice of the owner." >> "$summary"
                 return
             fi
@@ -268,6 +280,20 @@ done
 
 sed -nE 's/^- support of ([^ ]+) ([^ ]+): security fixes end on ([^ ]+) -> ([^ ]+)$/\1 \2 \3 \4/p' "$work/check.txt" | while read -r name line current newest; do
     update_support "$name" "$line" "$current" "$newest"
+done
+
+# A source of its own for one PHP version, such as pecl-xdebug-php86, goes away when the shared
+# source has the same version and file. Then that PHP version uses the shared source too.
+for name in $(awk '$1 ~ /^pecl-.*-php[0-9]+$/ { print $1 }' "$lock"); do
+    shared="${name%-php*}"
+    php_digits="${name##*-php}"
+    own_line="$(awk -v name="$name" '$1 == name { print $2, $3 }' "$lock")"
+
+    if [ "$own_line" = "$(awk -v name="$shared" '$1 == name { print $2, $3 }' "$lock")" ]; then
+        awk -v name="$name" '$1 != name' "$lock" > "$work/sources.lock"
+        cat "$work/sources.lock" > "$lock"
+        echo "- $name: removed. $shared has the same version ${own_line%% *}, so PHP ${php_digits:0:1}.${php_digits:1} uses it now" >> "$summary"
+    fi
 done
 
 grep -E "could not be read" "$work/check.txt" | sed 's/^- /- failed: /' >> "$summary"
