@@ -57,7 +57,14 @@ for file in "$extensions"/*.so; do
         echo "error: the shared extension $name does not load" >&2
         exit 1
     fi
-    echo "==> the shared extension $name loads"
+
+    # Composer reads the version of an extension. A source from git can give a text there instead.
+    version="$("$php" "${flags[@]}" -r "echo phpversion('$(module_name "$name")');" 2>/dev/null)" || true
+    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+ ]]; then
+        echo "error: the shared extension $name gives the version '$version'" >&2
+        exit 1
+    fi
+    echo "==> the shared extension $name loads, version $version"
 done
 
 echo "==> functional checks"

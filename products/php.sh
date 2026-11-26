@@ -11,8 +11,8 @@ PHP_EXTENSIONS="igbinary redis xdebug pcov apcu yaml imagick mailparse memcached
 
 # Revision 2 added mailparse. Revision 3 added the license of each program in the package.
 # Revision 4 added the licenses of the libraries in the source of PHP. Revision 5 adds gmp and
-# memcached. Revision 6 adds mongodb.
-PHP_REVISION=6
+# memcached. Revision 6 adds mongodb. Revision 7 gives Imagick from git its version number.
+PHP_REVISION=7
 
 # The license files of the programs in the package besides PHP and igbinary. Each line gives the
 # name in licenses/, the source in sources.lock and the file in that source. The extensions,
@@ -225,6 +225,24 @@ make_script_relocatable() {
     fi
 }
 
+# A source from git, such as Imagick, can have the text @PACKAGE_VERSION@ where the package of PECL
+# has the version. phpversion() then gives that text, and Composer reads it as version 0. So the
+# build puts the version of package.xml there, as the PECL package does.
+set_pecl_version() {
+    local dir="$1" release files
+
+    [ -f "$dir/package.xml" ] || return 0
+    files="$(grep -rl '@PACKAGE_VERSION@' "$dir" --include='*.h' || true)"
+    [ -n "$files" ] || return 0
+
+    release="$(sed -n 's:.*<release>\([0-9][^<]*\)</release>.*:\1:p' "$dir/package.xml" | head -1)"
+    [ -n "$release" ] || fail "no release version in $dir/package.xml"
+
+    while IFS= read -r file; do
+        sed -i '' "s/@PACKAGE_VERSION@/$release/g" "$file"
+    done <<< "$files"
+}
+
 build_pecl_extension() {
     local package="$1" source_name="$2" dir
     shift 2
@@ -232,6 +250,7 @@ build_pecl_extension() {
     log "Building the PECL extension ${source_name#pecl-} $(source_version "$source_name")"
 
     dir="$(unpack "$source_name")"
+    set_pecl_version "$dir"
     (
         cd "$dir"
         run_logged phpize.log "$package/bin/phpize"
